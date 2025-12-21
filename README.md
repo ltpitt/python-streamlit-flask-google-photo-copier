@@ -119,3 +119,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - [Setup Guide](SETUP.md) - Detailed setup and configuration
 - [GitHub Issues](GITHUB_ISSUES.md) - Project planning and tasks
+- [Issue Creation Guide](README_ISSUE_CREATION.md) - How to create GitHub issues from GITHUB_ISSUES.md
