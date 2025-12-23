@@ -4,8 +4,7 @@ Following TDD approach: RED phase - write failing tests first.
 These tests define the expected behavior of the Google Photos client.
 """
 
-from io import BytesIO
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from google.oauth2.credentials import Credentials
@@ -26,9 +25,7 @@ class TestClientInitialization:
         """Test that client initializes with valid credentials."""
         # Arrange
         mock_credentials = mocker.Mock(spec=Credentials)
-        mock_build = mocker.patch(
-            "google_photos_sync.google_photos.client.build"
-        )
+        mock_build = mocker.patch("google_photos_sync.google_photos.client.build")
         mock_service = mocker.Mock()
         mock_build.return_value = mock_service
 
@@ -154,10 +151,10 @@ class TestListPhotos:
         # Setup mock responses for both calls to list()
         mock_request1 = Mock()
         mock_request1.execute.return_value = page1_response
-        
+
         mock_request2 = Mock()
         mock_request2.execute.return_value = page2_response
-        
+
         # Return different request objects for first and second call
         mock_list.side_effect = [mock_request1, mock_request2]
 
@@ -307,9 +304,7 @@ class TestGetPhotoMetadata:
 
         # Mock 404 error
         mock_get = mock_media_items.get
-        mock_error = HttpError(
-            resp=Mock(status=404), content=b"Photo not found"
-        )
+        mock_error = HttpError(resp=Mock(status=404), content=b"Photo not found")
         mock_get.return_value.execute.side_effect = mock_error
 
         with patch(
@@ -347,21 +342,25 @@ class TestDownloadPhoto:
 
         # Mock requests.get for streaming download
         mock_response = Mock()
-        mock_response.iter_content.return_value = [photo_data[i:i+1024] for i in range(0, len(photo_data), 1024)]
+        mock_response.iter_content.return_value = [
+            photo_data[i : i + 1024] for i in range(0, len(photo_data), 1024)
+        ]
         mock_response.raise_for_status.return_value = None
 
         with patch(
             "google_photos_sync.google_photos.client.build",
             return_value=mock_service,
         ):
-            with patch("google_photos_sync.google_photos.client.requests") as mock_requests:
+            with patch(
+                "google_photos_sync.google_photos.client.requests"
+            ) as mock_requests:
                 mock_requests.get.return_value = mock_response
 
                 client = GooglePhotosClient(credentials=mock_credentials)
 
                 # Act
                 result_stream = client.download_photo(photo=photo)
-                
+
                 # Consume the stream
                 downloaded_data = b"".join(chunk for chunk in result_stream)
 
@@ -397,7 +396,9 @@ class TestDownloadPhoto:
             "google_photos_sync.google_photos.client.build",
             return_value=mock_service,
         ):
-            with patch("google_photos_sync.google_photos.client.requests") as mock_requests:
+            with patch(
+                "google_photos_sync.google_photos.client.requests"
+            ) as mock_requests:
                 mock_requests.get.return_value = mock_response
 
                 client = GooglePhotosClient(credentials=mock_credentials)
@@ -407,7 +408,7 @@ class TestDownloadPhoto:
                 result_stream = client.download_photo(
                     photo=photo, chunk_size=chunk_size
                 )
-                
+
                 # Consume stream
                 _ = b"".join(chunk for chunk in result_stream)
 
@@ -467,7 +468,6 @@ class TestUploadPhoto:
         )
 
         # Mock upload token response
-        mock_uploads = mock_service.mediaItems.return_value
         mock_upload_token = "upload-token-123"
 
         # Mock batchCreate response
@@ -709,9 +709,7 @@ class TestErrorHandling:
         mock_media_items = mock_service.mediaItems.return_value
 
         mock_list = mock_media_items.list
-        mock_list.return_value.execute.side_effect = ConnectionError(
-            "Network error"
-        )
+        mock_list.return_value.execute.side_effect = ConnectionError("Network error")
 
         with patch(
             "google_photos_sync.google_photos.client.build",

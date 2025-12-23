@@ -216,13 +216,9 @@ class GooglePhotosClient:
                     yield chunk
 
         except Exception as e:
-            raise PhotosAPIError(
-                f"Failed to download photo {photo.id}: {e}"
-            ) from e
+            raise PhotosAPIError(f"Failed to download photo {photo.id}: {e}") from e
 
-    def upload_photo(
-        self, photo_data: bytes, photo_metadata: Photo
-    ) -> Photo:
+    def upload_photo(self, photo_data: bytes, photo_metadata: Photo) -> Photo:
         """Upload photo with metadata preservation.
 
         This method uploads a photo and preserves its metadata including
@@ -288,7 +284,7 @@ class GooglePhotosClient:
         response.raise_for_status()
 
         # Upload token is in response body
-        upload_token = response.text
+        upload_token: str = response.text
         return upload_token
 
     def _create_media_item(self, upload_token: str, photo: Photo) -> Photo:
@@ -431,7 +427,7 @@ class GooglePhotosClient:
                 if e.resp.status == 429:
                     if attempt < self._max_retries:
                         # Exponential backoff: 1s, 2s, 4s, etc.
-                        delay = self._base_backoff * (2 ** attempt)
+                        delay = self._base_backoff * (2**attempt)
                         time.sleep(delay)
                         continue
                     else:
