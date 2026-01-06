@@ -272,9 +272,7 @@ class TestCompleteOAuthFlow:
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.exchange_code_for_token.return_value = mock_credentials
-            mock_auth.save_credentials.side_effect = CredentialStorageError(
-                "Disk full"
-            )
+            mock_auth.save_credentials.side_effect = CredentialStorageError("Disk full")
 
             response = client.get(
                 "/api/auth/callback?"
@@ -303,13 +301,17 @@ class TestCompleteCompareWorkflow:
         sample_target_photos: list[Photo],
     ) -> None:
         """Test complete compare workflow from authentication to results."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ) as mock_client_class, mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ) as mock_compare_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosClient"
+            ) as mock_client_class,
+            mock.patch(
+                "google_photos_sync.api.routes.CompareService"
+            ) as mock_compare_class,
+        ):
             # Setup mocks
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
@@ -389,11 +391,13 @@ class TestCompleteCompareWorkflow:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test compare workflow handles Google API errors gracefully."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch("google_photos_sync.api.routes.CompareService") as mock_compare:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch("google_photos_sync.api.routes.CompareService") as mock_compare,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
@@ -429,17 +433,15 @@ class TestCompleteSyncWorkflow:
         sample_source_photos: list[Photo],
     ) -> None:
         """Test complete sync workflow from authentication to completion."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ), mock.patch(
-            "google_photos_sync.api.routes.TransferManager"
-        ), mock.patch(
-            "google_photos_sync.api.routes.SyncService"
-        ) as mock_sync_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch("google_photos_sync.api.routes.CompareService"),
+            mock.patch("google_photos_sync.api.routes.TransferManager"),
+            mock.patch("google_photos_sync.api.routes.SyncService") as mock_sync_class,
+        ):
             # Setup authentication
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
@@ -491,17 +493,15 @@ class TestCompleteSyncWorkflow:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test sync workflow in dry-run mode (preview only)."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ), mock.patch(
-            "google_photos_sync.api.routes.TransferManager"
-        ), mock.patch(
-            "google_photos_sync.api.routes.SyncService"
-        ) as mock_sync_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch("google_photos_sync.api.routes.CompareService"),
+            mock.patch("google_photos_sync.api.routes.TransferManager"),
+            mock.patch("google_photos_sync.api.routes.SyncService") as mock_sync_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
@@ -547,17 +547,15 @@ class TestCompleteSyncWorkflow:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test sync workflow handles partial failures correctly."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ), mock.patch(
-            "google_photos_sync.api.routes.TransferManager"
-        ), mock.patch(
-            "google_photos_sync.api.routes.SyncService"
-        ) as mock_sync_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch("google_photos_sync.api.routes.CompareService"),
+            mock.patch("google_photos_sync.api.routes.TransferManager"),
+            mock.patch("google_photos_sync.api.routes.SyncService") as mock_sync_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
@@ -598,26 +596,22 @@ class TestCompleteSyncWorkflow:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test sync workflow handles complete sync failure."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ), mock.patch(
-            "google_photos_sync.api.routes.TransferManager"
-        ), mock.patch(
-            "google_photos_sync.api.routes.SyncService"
-        ) as mock_sync_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch("google_photos_sync.api.routes.CompareService"),
+            mock.patch("google_photos_sync.api.routes.TransferManager"),
+            mock.patch("google_photos_sync.api.routes.SyncService") as mock_sync_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
 
             mock_sync_service = mock.Mock()
             mock_sync_class.return_value = mock_sync_service
-            mock_sync_service.sync_accounts.side_effect = Exception(
-                "Network timeout"
-            )
+            mock_sync_service.sync_accounts.side_effect = Exception("Network timeout")
 
             response = client.post(
                 "/api/sync",
@@ -642,17 +636,15 @@ class TestIdempotencyVerification:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test that running sync multiple times produces same result."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ), mock.patch(
-            "google_photos_sync.api.routes.TransferManager"
-        ), mock.patch(
-            "google_photos_sync.api.routes.SyncService"
-        ) as mock_sync_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch("google_photos_sync.api.routes.CompareService"),
+            mock.patch("google_photos_sync.api.routes.TransferManager"),
+            mock.patch("google_photos_sync.api.routes.SyncService") as mock_sync_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
@@ -725,13 +717,15 @@ class TestIdempotencyVerification:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test that running compare multiple times produces consistent results."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ) as mock_compare_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch(
+                "google_photos_sync.api.routes.CompareService"
+            ) as mock_compare_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
@@ -803,13 +797,15 @@ class TestErrorRecoveryScenarios:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test system handles network errors gracefully."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ) as mock_compare_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch(
+                "google_photos_sync.api.routes.CompareService"
+            ) as mock_compare_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
@@ -833,9 +829,7 @@ class TestErrorRecoveryScenarios:
             assert data["success"] is False
             assert "Network unreachable" in data["error"]
 
-    def test_handling_of_missing_both_credentials(
-        self, client: FlaskClient
-    ) -> None:
+    def test_handling_of_missing_both_credentials(self, client: FlaskClient) -> None:
         """Test system handles when both source and target credentials are missing."""
         with mock.patch(
             "google_photos_sync.api.routes.GooglePhotosAuth"
@@ -870,17 +864,17 @@ class TestEndToEndIntegration:
         sample_target_photos: list[Photo],
     ) -> None:
         """Test complete workflow: OAuth → Compare → Dry-run → Real Sync."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ) as mock_compare_class, mock.patch(
-            "google_photos_sync.api.routes.TransferManager"
-        ), mock.patch(
-            "google_photos_sync.api.routes.SyncService"
-        ) as mock_sync_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch(
+                "google_photos_sync.api.routes.CompareService"
+            ) as mock_compare_class,
+            mock.patch("google_photos_sync.api.routes.TransferManager"),
+            mock.patch("google_photos_sync.api.routes.SyncService") as mock_sync_class,
+        ):
             # Setup mocks
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
@@ -890,9 +884,7 @@ class TestEndToEndIntegration:
                 "https://oauth.url",
                 "state1",
             )
-            response = client.post(
-                "/api/auth/google", json={"account_type": "source"}
-            )
+            response = client.post("/api/auth/google", json={"account_type": "source"})
             assert response.status_code == 200
 
             mock_auth.exchange_code_for_token.return_value = mock_credentials
@@ -903,9 +895,7 @@ class TestEndToEndIntegration:
             assert callback.status_code == 200
 
             # Step 2: OAuth for target
-            response = client.post(
-                "/api/auth/google", json={"account_type": "target"}
-            )
+            response = client.post("/api/auth/google", json={"account_type": "target"})
             assert response.status_code == 200
 
             callback = client.get(
@@ -999,13 +989,15 @@ class TestEndToEndIntegration:
         self, client: FlaskClient, mock_credentials: mock.Mock
     ) -> None:
         """Test workflow with multiple source-target account pairs."""
-        with mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosAuth"
-        ) as mock_auth_class, mock.patch(
-            "google_photos_sync.api.routes.GooglePhotosClient"
-        ), mock.patch(
-            "google_photos_sync.api.routes.CompareService"
-        ) as mock_compare_class:
+        with (
+            mock.patch(
+                "google_photos_sync.api.routes.GooglePhotosAuth"
+            ) as mock_auth_class,
+            mock.patch("google_photos_sync.api.routes.GooglePhotosClient"),
+            mock.patch(
+                "google_photos_sync.api.routes.CompareService"
+            ) as mock_compare_class,
+        ):
             mock_auth = mock.Mock()
             mock_auth_class.return_value = mock_auth
             mock_auth.get_valid_credentials.return_value = mock_credentials
