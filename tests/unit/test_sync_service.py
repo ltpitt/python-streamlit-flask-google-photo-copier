@@ -4,8 +4,7 @@ Following TDD approach: RED phase - write failing tests first.
 These tests define the expected behavior of the Sync Service.
 """
 
-from typing import Callable
-from unittest.mock import Mock, call
+from unittest.mock import Mock
 
 import pytest
 
@@ -258,7 +257,7 @@ class TestIdempotency:
     """Test idempotency - running sync twice has same result as running once."""
 
     def test_sync_is_idempotent_second_run_does_nothing(self):
-        """Test that running sync twice on identical accounts does nothing on second run."""
+        """Test sync twice on identical accounts does nothing on second run."""
         # Arrange
         mock_compare = Mock(spec=CompareService)
         mock_transfer = Mock(spec=TransferManager)
@@ -516,7 +515,7 @@ class TestProgressReporting:
         )
 
         # Act
-        result = service.sync_accounts(
+        service.sync_accounts(
             source_account="source@example.com",
             target_account="target@example.com",
             dry_run=False,

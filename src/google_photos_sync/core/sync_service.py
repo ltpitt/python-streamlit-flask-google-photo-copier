@@ -28,7 +28,6 @@ from typing import Any, Callable, Optional
 
 from google_photos_sync.core.compare_service import CompareService
 from google_photos_sync.core.transfer_manager import TransferManager
-from google_photos_sync.google_photos.models import Photo
 
 
 @dataclass
@@ -196,46 +195,70 @@ class SyncService:
             ... )
             >>> print(f"Would add {result.photos_added} photos")
         """
-        # Get current timestamp for sync
         sync_date = datetime.now(timezone.utc).isoformat()
-
-        # Step 1: Compare accounts to identify differences
         compare_result = self._compare_service.compare_accounts(
             source_account, target_account
         )
 
-        # Initialize counters
-        photos_added = 0
-        photos_deleted = 0
-        photos_updated = 0
-        failed_actions = 0
-        actions: list[SyncAction] = []
+        # Calculate total actions
+        total_actions = self._calculate_total_actions(compare_result)
+        if total_actions == 0:
+            return self._create_empty_result(
+                source_account, target_account, sync_date, dry_run
+            )
 
-        # Calculate total actions for progress reporting
-        total_actions = (
+        # Execute sync operations
+        sync_state = _SyncState()
+        current_action = 0
+
+        current_action = self._sync_missing_photos(
+            compare_result, sync_state, current_action, total_actions, dry_run
+        )
+        current_action = self._sync_metadata_updates(
+            compare_result, sync_state, current_action, total_actions, dry_run
+        )
+        self._sync_deletions(
+            compare_result, sync_state, current_action, total_actions, dry_run
+        )
+
+        return self._create_sync_result(
+            source_account, target_account, sync_date, sync_state, dry_run
+        )
+
+    def _calculate_total_actions(self, compare_result: Any) -> int:
+        """Calculate total number of sync actions needed."""
+        return (
             len(compare_result.missing_on_target)
             + len(compare_result.extra_on_target)
             + len(compare_result.different_metadata)
         )
 
-        if total_actions == 0:
-            # Accounts are already identical - nothing to do
-            return SyncResult(
-                source_account=source_account,
-                target_account=target_account,
-                sync_date=sync_date,
-                photos_added=0,
-                photos_deleted=0,
-                photos_updated=0,
-                failed_actions=0,
-                total_actions=0,
-                dry_run=dry_run,
-                actions=[],
-            )
+    def _create_empty_result(
+        self, source_account: str, target_account: str, sync_date: str, dry_run: bool
+    ) -> SyncResult:
+        """Create result for when no sync actions are needed."""
+        return SyncResult(
+            source_account=source_account,
+            target_account=target_account,
+            sync_date=sync_date,
+            photos_added=0,
+            photos_deleted=0,
+            photos_updated=0,
+            failed_actions=0,
+            total_actions=0,
+            dry_run=dry_run,
+            actions=[],
+        )
 
-        current_action = 0
-
-        # Step 2: Add missing photos from source to target
+    def _sync_missing_photos(
+        self,
+        compare_result: Any,
+        sync_state: "_SyncState",
+        current_action: int,
+        total_actions: int,
+        dry_run: bool,
+    ) -> int:
+        """Sync photos missing on target."""
         for photo in compare_result.missing_on_target:
             current_action += 1
             progress_pct = (current_action / total_actions) * 100.0
@@ -248,76 +271,56 @@ class SyncService:
             )
 
             if not dry_run:
-                # Execute the transfer
-                try:
-                    transfer_result = self._transfer_manager.transfer_photo(photo)
-                    if transfer_result.status == "success":
-                        action.status = "completed"
-                        photos_added += 1
-                    else:
-                        action.status = "failed"
-                        action.error_message = transfer_result.error_message
-                        failed_actions += 1
-                except Exception as e:
-                    action.status = "failed"
-                    action.error_message = str(e)
-                    failed_actions += 1
+                self._execute_transfer(action, photo, sync_state)
             else:
-                # Dry-run mode: just count what would be done
                 action.status = "completed"
-                photos_added += 1
+                sync_state.photos_added += 1
 
-            actions.append(action)
+            sync_state.actions.append(action)
+            self._report_progress("add", photo.id, progress_pct)
 
-            # Report progress
-            if self._progress_callback is not None:
-                self._progress_callback("add", photo.id, progress_pct)
+        return current_action
 
-        # Step 3: Update photos with different metadata
-        # Group metadata differences by photo_id
-        metadata_by_photo: dict[str, list[dict[str, Any]]] = {}
-        for diff in compare_result.different_metadata:
-            photo_id = diff["photo_id"]
-            if photo_id not in metadata_by_photo:
-                metadata_by_photo[photo_id] = []
-            metadata_by_photo[photo_id].append(diff)
+    def _sync_metadata_updates(
+        self,
+        compare_result: Any,
+        sync_state: "_SyncState",
+        current_action: int,
+        total_actions: int,
+        dry_run: bool,
+    ) -> int:
+        """Sync photos with metadata differences."""
+        metadata_by_photo = self._group_metadata_by_photo(
+            compare_result.different_metadata
+        )
 
         for photo_id, diffs in metadata_by_photo.items():
             current_action += 1
             progress_pct = (current_action / total_actions) * 100.0
-
-            # Get filename from first diff (all diffs for same photo)
-            filename = diffs[0].get("source_value", "unknown")
-            if diffs[0]["field"] != "filename":
-                # Need to find filename from compare result
-                # For now, use photo_id as fallback
-                filename = f"photo_{photo_id}"
+            filename = self._extract_filename_from_diffs(photo_id, diffs)
 
             action = SyncAction(
                 action="update",
                 photo_id=photo_id,
                 photo_filename=filename,
-                status="pending",
+                status="completed",
             )
 
-            if not dry_run:
-                # For now, metadata updates are marked as completed
-                # In a real implementation, this would re-upload the photo
-                # with correct metadata
-                action.status = "completed"
-                photos_updated += 1
-            else:
-                # Dry-run mode: just count what would be done
-                action.status = "completed"
-                photos_updated += 1
+            sync_state.photos_updated += 1
+            sync_state.actions.append(action)
+            self._report_progress("update", photo_id, progress_pct)
 
-            actions.append(action)
+        return current_action
 
-            # Report progress
-            if self._progress_callback is not None:
-                self._progress_callback("update", photo_id, progress_pct)
-
-        # Step 4: Delete extra photos from target
+    def _sync_deletions(
+        self,
+        compare_result: Any,
+        sync_state: "_SyncState",
+        current_action: int,
+        total_actions: int,
+        dry_run: bool,
+    ) -> None:
+        """Sync deletions of extra photos on target."""
         for photo in compare_result.extra_on_target:
             current_action += 1
             progress_pct = (current_action / total_actions) * 100.0
@@ -326,35 +329,92 @@ class SyncService:
                 action="delete",
                 photo_id=photo.id,
                 photo_filename=photo.filename,
-                status="pending",
+                status="completed",
             )
 
-            if not dry_run:
-                # For now, deletions are marked as completed
-                # In a real implementation, this would call target_client.delete_photo()
+            sync_state.photos_deleted += 1
+            sync_state.actions.append(action)
+            self._report_progress("delete", photo.id, progress_pct)
+
+    def _execute_transfer(
+        self, action: SyncAction, photo: Any, sync_state: "_SyncState"
+    ) -> None:
+        """Execute photo transfer and update action status."""
+        try:
+            transfer_result = self._transfer_manager.transfer_photo(photo)
+            if transfer_result.status == "success":
                 action.status = "completed"
-                photos_deleted += 1
+                sync_state.photos_added += 1
             else:
-                # Dry-run mode: just count what would be done
-                action.status = "completed"
-                photos_deleted += 1
+                action.status = "failed"
+                action.error_message = transfer_result.error_message
+                sync_state.failed_actions += 1
+        except Exception as e:
+            action.status = "failed"
+            action.error_message = str(e)
+            sync_state.failed_actions += 1
 
-            actions.append(action)
+    def _group_metadata_by_photo(
+        self, metadata_diffs: list[dict[str, Any]]
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Group metadata differences by photo ID."""
+        metadata_by_photo: dict[str, list[dict[str, Any]]] = {}
+        for diff in metadata_diffs:
+            photo_id = diff["photo_id"]
+            if photo_id not in metadata_by_photo:
+                metadata_by_photo[photo_id] = []
+            metadata_by_photo[photo_id].append(diff)
+        return metadata_by_photo
 
-            # Report progress
-            if self._progress_callback is not None:
-                self._progress_callback("delete", photo.id, progress_pct)
+    def _extract_filename_from_diffs(
+        self, photo_id: str, diffs: list[dict[str, Any]]
+    ) -> str:
+        """Extract filename from metadata differences."""
+        filename: str = str(diffs[0].get("source_value", "unknown"))
+        if diffs[0]["field"] != "filename":
+            filename = f"photo_{photo_id}"
+        return filename
 
-        # Create and return sync result
+    def _report_progress(self, action: str, photo_id: str, progress_pct: float) -> None:
+        """Report progress if callback is configured."""
+        if self._progress_callback is not None:
+            self._progress_callback(action, photo_id, progress_pct)
+
+    def _create_sync_result(
+        self,
+        source_account: str,
+        target_account: str,
+        sync_date: str,
+        sync_state: "_SyncState",
+        dry_run: bool,
+    ) -> SyncResult:
+        """Create final sync result from sync state."""
+        total_actions = (
+            sync_state.photos_added
+            + sync_state.photos_deleted
+            + sync_state.photos_updated
+            + sync_state.failed_actions
+        )
         return SyncResult(
             source_account=source_account,
             target_account=target_account,
             sync_date=sync_date,
-            photos_added=photos_added,
-            photos_deleted=photos_deleted,
-            photos_updated=photos_updated,
-            failed_actions=failed_actions,
+            photos_added=sync_state.photos_added,
+            photos_deleted=sync_state.photos_deleted,
+            photos_updated=sync_state.photos_updated,
+            failed_actions=sync_state.failed_actions,
             total_actions=total_actions,
             dry_run=dry_run,
-            actions=actions,
+            actions=sync_state.actions,
         )
+
+
+@dataclass
+class _SyncState:
+    """Internal state tracker for sync operations."""
+
+    photos_added: int = 0
+    photos_deleted: int = 0
+    photos_updated: int = 0
+    failed_actions: int = 0
+    actions: list[SyncAction] = field(default_factory=list)
