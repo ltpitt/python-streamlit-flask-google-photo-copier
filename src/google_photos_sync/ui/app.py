@@ -13,10 +13,8 @@ import streamlit as st
 
 from google_photos_sync import __version__
 from google_photos_sync.ui.components.auth_component import render_auth_section
-from google_photos_sync.ui.components.status_component import (
-    render_comparison_summary,
-    show_status_message,
-)
+from google_photos_sync.ui.components.compare_view import render_compare_view
+from google_photos_sync.ui.components.status_component import show_status_message
 from google_photos_sync.ui.components.sync_view import render_sync_view
 
 # Type alias for navigation pages
@@ -313,43 +311,11 @@ def render_compare_page() -> None:
 
     st.write("---")
 
-    # Compare button (only if both authenticated)
-    both_authenticated = (
-        st.session_state.source_auth is not None
-        and st.session_state.target_auth is not None
+    # Use the comprehensive compare view component
+    render_compare_view(
+        source_auth=st.session_state.source_auth,
+        target_auth=st.session_state.target_auth,
     )
-
-    if both_authenticated:
-        if st.button("🔍 Compare Accounts", type="primary", use_container_width=True):
-            # TODO: Implement actual comparison logic
-            show_status_message(
-                "Comparison feature coming soon! Backend integration in progress.",
-                "info",
-                "🚧",
-            )
-
-            # Mock data for demonstration
-            st.session_state.comparison_result = {
-                "total_source": 500,
-                "total_target": 450,
-                "missing_on_target": 60,
-                "extra_on_target": 10,
-                "different_metadata": 5,
-            }
-
-        # Display comparison results if available
-        if st.session_state.comparison_result:
-            st.write("---")
-            result = st.session_state.comparison_result
-            render_comparison_summary(
-                total_source=result["total_source"],
-                total_target=result["total_target"],
-                missing=result["missing_on_target"],
-                extra=result["extra_on_target"],
-                different=result["different_metadata"],
-            )
-    else:
-        st.info("ℹ️ Please authenticate both accounts to compare.")
 
 
 def render_sync_page() -> None:
