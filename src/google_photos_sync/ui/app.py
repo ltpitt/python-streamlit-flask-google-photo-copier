@@ -13,14 +13,11 @@ import streamlit as st
 
 from google_photos_sync import __version__
 from google_photos_sync.ui.components.auth_component import render_auth_section
-from google_photos_sync.ui.components.confirmation_dialog import (
-    render_sync_confirmation_dialog,
-)
 from google_photos_sync.ui.components.status_component import (
     render_comparison_summary,
-    render_sync_statistics,
     show_status_message,
 )
+from google_photos_sync.ui.components.sync_view import render_sync_view
 
 # Type alias for navigation pages
 PageType = Literal["Home", "Compare", "Sync", "Settings"]
@@ -362,88 +359,8 @@ def render_sync_page() -> None:
 
     st.write("---")
 
-    # Check if comparison was done
-    if not st.session_state.comparison_result:
-        st.warning(
-            "⚠️ Please go to the **Compare** page first to preview changes "
-            "before syncing."
-        )
-        return
-
-    # Check authentication
-    both_authenticated = (
-        st.session_state.source_auth is not None
-        and st.session_state.target_auth is not None
-    )
-
-    if not both_authenticated:
-        st.error("❌ Both accounts must be authenticated to sync.")
-        return
-
-    # Display comparison summary
-    result = st.session_state.comparison_result
-    render_comparison_summary(
-        total_source=result["total_source"],
-        total_target=result["total_target"],
-        missing=result["missing_on_target"],
-        extra=result["extra_on_target"],
-        different=result["different_metadata"],
-    )
-
-    st.write("---")
-
-    # Confirmation dialog
-    source_email = st.session_state.source_auth.get("email", "source@example.com")
-    target_email = st.session_state.target_auth.get("email", "target@example.com")
-
-    confirmed = render_sync_confirmation_dialog(
-        source_account=source_email,
-        target_account=target_email,
-        photos_to_add=result["missing_on_target"],
-        photos_to_delete=result["extra_on_target"],
-        photos_to_update=result["different_metadata"],
-    )
-
-    # Sync button (only enabled if confirmed)
-    if confirmed:
-        if st.button(
-            "🔴 EXECUTE SYNC (Irreversible)",
-            type="primary",
-            use_container_width=True,
-        ):
-            # TODO: Implement actual sync logic
-            show_status_message(
-                "Sync feature coming soon! Backend integration in progress.",
-                "info",
-                "🚧",
-            )
-
-            # Mock sync result for demonstration
-            st.session_state.sync_status = {
-                "photos_transferred": 60,
-                "photos_deleted": 10,
-                "photos_skipped": 430,
-                "elapsed_time_seconds": 125.5,
-            }
-
-        # Display sync results if available
-        if st.session_state.sync_status:
-            st.write("---")
-            st.success("✅ Sync completed successfully!")
-            status = st.session_state.sync_status
-            render_sync_statistics(
-                photos_transferred=status["photos_transferred"],
-                photos_deleted=status["photos_deleted"],
-                photos_skipped=status["photos_skipped"],
-                elapsed_time_seconds=status["elapsed_time_seconds"],
-            )
-    else:
-        st.button(
-            "Execute Sync",
-            disabled=True,
-            use_container_width=True,
-            help="Complete all confirmations above to enable sync",
-        )
+    # Use the comprehensive sync view component
+    render_sync_view()
 
 
 def render_settings_page() -> None:
