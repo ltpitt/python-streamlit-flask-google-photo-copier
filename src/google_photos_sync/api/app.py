@@ -110,6 +110,7 @@ def _register_routes(app: Flask) -> None:
     Args:
         app: Flask application instance
     """
+    from google_photos_sync.api.routes import register_routes
 
     @app.route("/health", methods=["GET"])
     def health_check() -> tuple[Any, int]:
@@ -131,4 +132,7 @@ def _register_routes(app: Flask) -> None:
             200,
         )
 
-    logger.info("Routes registered: /health")
+    # Register API blueprint with routes
+    register_routes(app)
+
+    logger.info("Routes registered: /health, /api/*")
