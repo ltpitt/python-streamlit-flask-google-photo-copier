@@ -289,7 +289,12 @@ class SyncService:
         total_actions: int,
         dry_run: bool,
     ) -> int:
-        """Sync photos with metadata differences."""
+        """Sync photos with metadata differences.
+
+        Note: Currently marks updates as completed without actual re-upload.
+        In production, this would re-upload the photo with corrected metadata
+        from source to target using _execute_transfer.
+        """
         metadata_by_photo = self._group_metadata_by_photo(
             compare_result.different_metadata
         )
@@ -320,7 +325,12 @@ class SyncService:
         total_actions: int,
         dry_run: bool,
     ) -> None:
-        """Sync deletions of extra photos on target."""
+        """Sync deletions of extra photos on target.
+
+        Note: Currently marks deletions as completed without actual deletion.
+        In production, this would call target_client.delete_photo(photo.id)
+        with proper error handling similar to _execute_transfer.
+        """
         for photo in compare_result.extra_on_target:
             current_action += 1
             progress_pct = (current_action / total_actions) * 100.0
@@ -369,7 +379,18 @@ class SyncService:
     def _extract_filename_from_diffs(
         self, photo_id: str, diffs: list[dict[str, Any]]
     ) -> str:
-        """Extract filename from metadata differences."""
+        """Extract filename from metadata differences.
+
+        Args:
+            photo_id: ID of the photo
+            diffs: List of metadata differences (must not be empty)
+
+        Returns:
+            Extracted filename or default based on photo_id
+        """
+        if not diffs:
+            return f"photo_{photo_id}"
+
         filename: str = str(diffs[0].get("source_value", "unknown"))
         if diffs[0]["field"] != "filename":
             filename = f"photo_{photo_id}"
