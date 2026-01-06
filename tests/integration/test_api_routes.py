@@ -67,9 +67,7 @@ def mock_compare_service():
 @pytest.fixture
 def mock_sync_service():
     """Mock sync service."""
-    with mock.patch(
-        "google_photos_sync.api.routes.SyncService"
-    ) as mock_service_class:
+    with mock.patch("google_photos_sync.api.routes.SyncService") as mock_service_class:
         mock_instance = mock.Mock()
         mock_service_class.return_value = mock_instance
         yield mock_instance
@@ -195,9 +193,7 @@ class TestAuthRoutes:
         assert "message" in data
         mock_auth.save_credentials.assert_called_once()
 
-    def test_oauth_callback_requires_code_parameter(
-        self, client: FlaskClient
-    ) -> None:
+    def test_oauth_callback_requires_code_parameter(self, client: FlaskClient) -> None:
         """Test GET /api/auth/callback requires code parameter."""
         # Act
         response = client.get(

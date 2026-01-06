@@ -171,9 +171,7 @@ def initiate_oauth() -> tuple[dict[str, Any], int]:
         return _error_response(str(e), "AUTH_INITIATION_FAILED", 500)
     except Exception as e:
         logger.exception(f"Unexpected error in OAuth initiation: {e}")
-        return _error_response(
-            "Internal server error", "INTERNAL_SERVER_ERROR", 500
-        )
+        return _error_response("Internal server error", "INTERNAL_SERVER_ERROR", 500)
 
 
 @api_bp.route("/auth/callback", methods=["GET"])
@@ -256,9 +254,7 @@ def oauth_callback() -> tuple[dict[str, Any], int]:
         return _error_response(str(e), "AUTHENTICATION_FAILED", 401)
     except Exception as e:
         logger.exception(f"Unexpected error in OAuth callback: {e}")
-        return _error_response(
-            "Internal server error", "INTERNAL_SERVER_ERROR", 500
-        )
+        return _error_response("Internal server error", "INTERNAL_SERVER_ERROR", 500)
 
 
 @api_bp.route("/compare", methods=["POST"])
