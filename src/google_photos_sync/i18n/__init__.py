@@ -19,7 +19,7 @@ Usage:
     >>> # In Streamlit app
     >>> import streamlit as st
     >>> from google_photos_sync.i18n import get_translator
-    >>> 
+    >>>
     >>> lang = st.session_state.get("language", "en")
     >>> t = get_translator(lang)
     >>> st.title(t("home.title"))

@@ -14,6 +14,10 @@ import streamlit as st
 from google_photos_sync import __version__
 from google_photos_sync.ui.components.auth_component import render_auth_section
 from google_photos_sync.ui.components.compare_view import render_compare_view
+from google_photos_sync.ui.components.language_selector import (
+    get_current_translator,
+    render_language_selector,
+)
 from google_photos_sync.ui.components.status_component import show_status_message
 from google_photos_sync.ui.components.sync_view import render_sync_view
 
@@ -28,12 +32,17 @@ def initialize_session_state() -> None:
     exist. This ensures the app doesn't crash when accessing session state.
 
     Session state keys:
+        - language: Current UI language (default: "en")
         - source_auth: Authentication data for source account (dict or None)
         - target_auth: Authentication data for target account (dict or None)
         - comparison_result: Result of last comparison operation (dict or None)
         - sync_status: Current sync operation status (dict or None)
         - current_page: Currently selected navigation page
     """
+    # Language preference (initialize first, before other components)
+    if "language" not in st.session_state:
+        st.session_state.language = "en"
+
     # Authentication state
     if "source_auth" not in st.session_state:
         st.session_state.source_auth = None
@@ -132,63 +141,88 @@ def render_sidebar() -> PageType:
 
     The sidebar contains:
     - App logo and title
+    - Language selector
     - Navigation menu (Home, Compare, Sync, Settings)
     - Authentication status indicators
 
     Returns:
         The currently selected page name
     """
+    # Get translator for current language
+    t = get_current_translator()
+
     with st.sidebar:
         # App branding
-        st.markdown("# 📸 Google Photos Sync")
+        st.markdown(f"# {t('app.icon')} {t('app.title')}")
+        st.markdown("---")
+
+        # Language selector
+        render_language_selector()
         st.markdown("---")
 
         # Navigation menu
-        st.subheader("Navigation")
-        page = st.radio(
+        st.subheader(t("nav.label"))
+
+        # Map display names to internal page names
+        nav_options = {
+            t("nav.home"): "Home",
+            t("nav.compare"): "Compare",
+            t("nav.sync"): "Sync",
+            t("nav.settings"): "Settings",
+        }
+
+        selected_display = st.radio(
             "Go to:",
-            ["Home", "Compare", "Sync", "Settings"],
+            options=list(nav_options.keys()),
+            index=list(nav_options.values()).index(st.session_state.current_page)
+            if st.session_state.current_page in nav_options.values()
+            else 0,
             key="navigation",
             label_visibility="collapsed",
         )
 
+        # Get internal page name from display name
+        page = nav_options[selected_display]
+
         st.markdown("---")
 
         # Authentication status
-        st.subheader("Authentication Status")
+        st.subheader(t("auth.status_title"))
 
-        st.caption("**Source Account:**")
+        st.caption(f"**{t('auth.source_account')}**")
         if st.session_state.source_auth:
             email = st.session_state.source_auth.get("email", "Unknown")
             st.success(f"✅ {email}")
         else:
-            st.error("❌ Not signed in")
+            st.error(f"❌ {t('auth.not_signed_in')}")
 
-        st.caption("**Target Account:**")
+        st.caption(f"**{t('auth.target_account')}**")
         if st.session_state.target_auth:
             email = st.session_state.target_auth.get("email", "Unknown")
             st.success(f"✅ {email}")
         else:
-            st.error("❌ Not signed in")
+            st.error(f"❌ {t('auth.not_signed_in')}")
 
     return page  # type: ignore
 
 
 def render_footer() -> None:
     """Render footer with version and documentation link."""
+    t = get_current_translator()
+
     st.markdown("---")
     repo_url = "https://github.com/ltpitt/python-streamlit-flask-google-photo-copier"
     st.markdown(
         f"""
         <div class="footer">
-            <p>Google Photos Sync v{__version__}</p>
+            <p>{t("footer.version", version=__version__)}</p>
             <p>
                 <a href="{repo_url}" target="_blank">
-                    Documentation
+                    {t("footer.documentation")}
                 </a>
                 |
                 <a href="{repo_url}/issues" target="_blank">
-                    Report Issue
+                    {t("footer.report_issue")}
                 </a>
             </p>
         </div>
@@ -199,104 +233,59 @@ def render_footer() -> None:
 
 def render_home_page() -> None:
     """Render the Home page with welcome message and instructions."""
+    t = get_current_translator()
+
     st.markdown(
-        '<h1 class="main-title">📸 Welcome to Google Photos Sync</h1>',
+        f'<h1 class="main-title">{t("home.main_title")}</h1>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p class="subtitle">Safely sync your Google Photos between accounts</p>',
+        f'<p class="subtitle">{t("home.subtitle")}</p>',
         unsafe_allow_html=True,
     )
 
     # Introduction
     st.write("---")
-    st.header("What is Google Photos Sync?")
-    st.write(
-        """
-        Google Photos Sync is a production-grade tool that enables
-        **monodirectional synchronization** of Google Photos from a source
-        account to a target account.
-
-        This means the target account will become an **exact copy** of the
-        source account, including all photos, metadata, and organization.
-        """
-    )
+    st.header(t("home.what_is_title"))
+    st.write(t("home.what_is_description"))
 
     # Key features
-    st.header("✨ Key Features")
+    st.header(t("home.features_title"))
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("🔒 Safe & Secure")
-        st.write("- Multiple confirmation steps for destructive operations")
-        st.write("- OAuth 2.0 authentication")
-        st.write("- No passwords stored")
-        st.write("- Idempotent operations (safe to retry)")
+        st.subheader(t("home.feature_safe_title"))
+        st.write(t("home.feature_safe_items"))
 
-        st.subheader("💾 Complete Metadata Preservation")
-        st.write("- EXIF data (camera, settings)")
-        st.write("- GPS location information")
-        st.write("- Creation dates and times")
-        st.write("- Descriptions and favorites")
+        st.subheader(t("home.feature_metadata_title"))
+        st.write(t("home.feature_metadata_items"))
 
     with col2:
-        st.subheader("⚡ Efficient & Reliable")
-        st.write("- Memory-efficient streaming transfers")
-        st.write("- Conservative API usage")
-        st.write("- Automatic retry on failures")
-        st.write("- Progress tracking")
+        st.subheader(t("home.feature_efficient_title"))
+        st.write(t("home.feature_efficient_items"))
 
-        st.subheader("👥 User-Friendly")
-        st.write("- Simple, clear interface")
-        st.write("- Preview changes before syncing")
-        st.write("- Detailed statistics and logs")
-        st.write("- No technical knowledge required")
+        st.subheader(t("home.feature_friendly_title"))
+        st.write(t("home.feature_friendly_items"))
 
     # How it works
-    st.header("🔄 How It Works")
-    st.write(
-        """
-        1. **Authenticate**: Sign in to both source and target Google Photos accounts
-        2. **Compare**: Preview what will change (photos to add, delete, or update)
-        3. **Confirm**: Review warnings and confirm destructive operations
-        4. **Sync**: Execute the synchronization with full progress tracking
-        """
-    )
+    st.header(t("home.how_it_works_title"))
+    st.write(t("home.how_it_works_description"))
 
     # Getting started
-    st.header("🚀 Getting Started")
-    st.info(
-        """
-        **Ready to begin?**
-
-        1. Navigate to **Compare** to authenticate and preview changes
-        2. Then go to **Sync** to execute the synchronization
-        3. Visit **Settings** to configure advanced options
-
-        ℹ️ **Note**: You must authenticate both accounts before you can compare or sync.
-        """
-    )
+    st.header(t("home.getting_started_title"))
+    st.info(t("home.getting_started_description"))
 
     # Important warnings
-    st.header("⚠️ Important Warnings")
-    st.warning(
-        """
-        **This is a DESTRUCTIVE operation:**
-
-        - Photos on the target account that don't exist on source **will be deleted**
-        - This cannot be undone without a backup
-        - Always compare before syncing
-        - Make sure you're syncing in the right direction
-
-        **We recommend backing up your target account first!**
-        """
-    )
+    st.header(t("home.warnings_title"))
+    st.warning(t("home.warnings_description"))
 
 
 def render_compare_page() -> None:
     """Render the Compare page for account comparison."""
-    st.title("🔍 Compare Accounts")
-    st.write("Compare source and target accounts to see what will change during sync.")
+    t = get_current_translator()
+
+    st.title(t("compare.title"))
+    st.write(t("compare.description"))
 
     st.write("---")
 
@@ -320,8 +309,10 @@ def render_compare_page() -> None:
 
 def render_sync_page() -> None:
     """Render the Sync page for executing synchronization."""
-    st.title("🔄 Sync Accounts")
-    st.write("Execute synchronization from source to target account.")
+    t = get_current_translator()
+
+    st.title(t("sync.title"))
+    st.write(t("sync.description"))
 
     st.write("---")
 
@@ -331,87 +322,80 @@ def render_sync_page() -> None:
 
 def render_settings_page() -> None:
     """Render the Settings page for configuration."""
-    st.title("⚙️ Settings")
-    st.write("Configure synchronization settings and preferences.")
+    t = get_current_translator()
+
+    st.title(t("settings.title"))
+    st.write(t("settings.description"))
 
     st.write("---")
 
     # Transfer settings
-    st.subheader("Transfer Settings")
+    st.subheader(t("settings.transfer_title"))
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.number_input(
-            "Max Concurrent Transfers",
+            t("settings.max_concurrent"),
             min_value=1,
             max_value=10,
             value=3,
-            help=(
-                "Number of photos to transfer simultaneously. "
-                "Higher = faster but more memory usage."
-            ),
+            help=t("settings.max_concurrent_help"),
         )
 
         st.number_input(
-            "Chunk Size (MB)",
+            t("settings.chunk_size"),
             min_value=1,
             max_value=32,
             value=8,
-            help=(
-                "Size of chunks for streaming transfers. "
-                "Larger = fewer API calls but more memory."
-            ),
+            help=t("settings.chunk_size_help"),
         )
 
     with col2:
         st.number_input(
-            "Max Retries",
+            t("settings.max_retries"),
             min_value=1,
             max_value=10,
             value=3,
-            help="Number of retry attempts for failed operations.",
+            help=t("settings.max_retries_help"),
         )
 
         st.selectbox(
-            "Log Level",
+            t("settings.log_level"),
             options=["DEBUG", "INFO", "WARNING", "ERROR"],
             index=1,
-            help="Logging verbosity level.",
+            help=t("settings.log_level_help"),
         )
 
     st.write("---")
 
     # Advanced settings
-    st.subheader("Advanced Settings")
+    st.subheader(t("settings.advanced_title"))
 
     st.checkbox(
-        "Enable rate limiting",
+        t("settings.rate_limiting"),
         value=True,
-        help="Limit API calls to prevent hitting Google API quotas.",
+        help=t("settings.rate_limiting_help"),
     )
 
     st.checkbox(
-        "Preserve all metadata",
+        t("settings.preserve_metadata"),
         value=True,
         disabled=True,
-        help=(
-            "Always preserve all photo metadata (EXIF, location, etc.). "
-            "Cannot be disabled."
-        ),
+        help=t("settings.preserve_metadata_help"),
     )
 
     st.checkbox(
-        "Dry run mode",
+        t("settings.dry_run"),
         value=False,
-        help="Preview changes without executing them. Useful for testing.",
+        help=t("settings.dry_run_help"),
     )
 
     st.write("---")
 
     # Save button
-    if st.button("💾 Save Settings", type="primary", use_container_width=True):
-        show_status_message("Settings saved successfully!", "success", "✅")
+    if st.button(t("settings.save_button"), type="primary", use_container_width=True):
+        show_status_message(t("settings.save_success"), "success", "✅")
         # TODO: Implement actual settings persistence
 
 
