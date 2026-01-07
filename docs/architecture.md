@@ -628,7 +628,7 @@ Typed data structures for Google Photos entities.
 ### Unit Tests
 - Test individual functions/methods in isolation
 - Mock all external dependencies
-- Fast execution (&lt;1s for entire suite)
+- Fast execution (<1s for entire suite)
 - 90%+ coverage
 
 ### Integration Tests

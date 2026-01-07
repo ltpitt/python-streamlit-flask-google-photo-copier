@@ -605,7 +605,7 @@ Before clicking the sync button, make sure:
 - Computer fan may run (CPU is working)
 
 **Warning Signs**:
-- Progress bar stuck for &gt;10 minutes (see Troubleshooting)
+- Progress bar stuck for >10 minutes (see Troubleshooting)
 - Many "Failed" messages (see Troubleshooting)
 - Internet connection lost (will retry, but may need to restart)
 
@@ -704,7 +704,7 @@ The application has several safety features:
 - **Fix**: Wait 5 minutes, it should resume automatically
 - **Cause**: Network issue
 - **Fix**: Check internet connection
-- **If stuck &gt;15 minutes**: Stop sync (Ctrl+C in terminal), wait 10 minutes, start again
+- **If stuck >15 minutes**: Stop sync (Ctrl+C in terminal), wait 10 minutes, start again
 
 **Issue**: Many "Failed" actions in sync results
 - **Cause**: Photos deleted from source during sync
