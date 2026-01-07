@@ -73,7 +73,7 @@ class TestOAuthURLGeneration:
         mock_flow = mocker.Mock(spec=Flow)
         mock_flow.authorization_url.return_value = (
             "http://auth.url",
-            "state123",
+            "mock_state_ignored",  # Implementation generates its own state
         )
 
         with patch(
@@ -92,22 +92,25 @@ class TestOAuthURLGeneration:
 
             # Assert
             assert url == "http://auth.url"
-            assert state == "state123"
+            # Verify state format: "source_{random_token}"
+            assert state.startswith("source_")
+            assert len(state) > 7  # "source_" + random token
             # Verify readonly scope was used
             call_args = mock_flow_constructor.call_args
             scopes = call_args[1]["scopes"]
             assert "https://www.googleapis.com/auth/photoslibrary.readonly" in scopes
-            assert (
-                "https://www.googleapis.com/auth/photoslibrary.appendonly" not in scopes
-            )
+            assert "https://www.googleapis.com/auth/photoslibrary" not in scopes
+            # Verify openid and email scopes are included
+            assert "openid" in scopes
+            assert "https://www.googleapis.com/auth/userinfo.email" in scopes
 
-    def test_generate_auth_url_for_target_account_uses_appendonly_scope(self, mocker):
-        """Test that target account auth URL uses appendonly scope."""
+    def test_generate_auth_url_for_target_account_uses_full_access_scope(self, mocker):
+        """Test that target account auth URL uses full access scope for writing."""
         # Arrange
         mock_flow = mocker.Mock(spec=Flow)
         mock_flow.authorization_url.return_value = (
             "http://auth.url",
-            "state456",
+            "mock_state_ignored",  # Implementation generates its own state
         )
 
         with patch(
@@ -126,14 +129,18 @@ class TestOAuthURLGeneration:
 
             # Assert
             assert url == "http://auth.url"
-            assert state == "state456"
-            # Verify appendonly scope was used
+            # Verify state format: "target_{random_token}"
+            assert state.startswith("target_")
+            assert len(state) > 7  # "target_" + random token
+            # Verify full photoslibrary scope was used (needed for writing)
             call_args = mock_flow_constructor.call_args
             scopes = call_args[1]["scopes"]
-            assert "https://www.googleapis.com/auth/photoslibrary.appendonly" in scopes
-            assert (
-                "https://www.googleapis.com/auth/photoslibrary.readonly" not in scopes
-            )
+            assert "https://www.googleapis.com/auth/photoslibrary" in scopes
+            readonly_scope = "https://www.googleapis.com/auth/photoslibrary.readonly"
+            assert readonly_scope not in scopes
+            # Verify openid and email scopes are included
+            assert "openid" in scopes
+            assert "https://www.googleapis.com/auth/userinfo.email" in scopes
 
 
 class TestTokenExchange:
