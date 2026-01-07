@@ -32,6 +32,13 @@ from google_photos_sync.google_photos.auth import (
     GooglePhotosAuth,
 )
 from google_photos_sync.google_photos.client import GooglePhotosClient
+from google_photos_sync.utils.validators import (
+    ValidationError,
+    validate_account_type,
+    validate_boolean,
+    validate_email,
+    validate_json_payload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -129,24 +136,18 @@ def initiate_oauth() -> tuple[dict[str, Any], int]:
     try:
         # Validate request
         data = request.get_json()
-        if not data:
-            return _error_response(
-                "Request body is required", "MISSING_REQUEST_BODY", 400
-            )
+        
+        # Validate JSON payload
+        try:
+            validated_data = validate_json_payload(data, ["account_type"])
+        except ValidationError as e:
+            return _error_response(str(e), "VALIDATION_ERROR", 400)
 
-        account_type_str = data.get("account_type")
-        if not account_type_str:
-            return _error_response(
-                "account_type is required", "MISSING_ACCOUNT_TYPE", 400
-            )
-
-        # Validate account_type value
-        if account_type_str not in ["source", "target"]:
-            return _error_response(
-                "account_type must be 'source' or 'target'",
-                "INVALID_ACCOUNT_TYPE",
-                400,
-            )
+        # Validate and sanitize account_type
+        try:
+            account_type_str = validate_account_type(validated_data["account_type"])
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
 
         # Convert to AccountType enum
         account_type = AccountType(account_type_str)
@@ -213,22 +214,22 @@ def oauth_callback() -> tuple[dict[str, Any], int]:
         # Validate required parameters
         if not code:
             return _error_response("code parameter is required", "MISSING_CODE", 400)
-        if not account_type_str:
-            return _error_response(
-                "account_type parameter is required", "MISSING_ACCOUNT_TYPE", 400
-            )
-        if not account_email:
-            return _error_response(
-                "account_email parameter is required", "MISSING_ACCOUNT_EMAIL", 400
-            )
+        
+        # Validate and sanitize account_type
+        try:
+            if not account_type_str:
+                raise ValidationError("account_type parameter is required")
+            account_type_str = validate_account_type(account_type_str)
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
 
-        # Validate account_type value
-        if account_type_str not in ["source", "target"]:
-            return _error_response(
-                "account_type must be 'source' or 'target'",
-                "INVALID_ACCOUNT_TYPE",
-                400,
-            )
+        # Validate and sanitize email
+        try:
+            if not account_email:
+                raise ValidationError("account_email parameter is required")
+            account_email = validate_email(account_email)
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_EMAIL", 400)
 
         # Convert to AccountType enum
         account_type = AccountType(account_type_str)
@@ -296,22 +297,21 @@ def compare_accounts() -> tuple[dict[str, Any], int]:
     try:
         # Validate request
         data = request.get_json()
-        if not data:
-            return _error_response(
-                "Request body is required", "MISSING_REQUEST_BODY", 400
+        
+        # Validate JSON payload
+        try:
+            validated_data = validate_json_payload(
+                data, ["source_account", "target_account"]
             )
+        except ValidationError as e:
+            return _error_response(str(e), "VALIDATION_ERROR", 400)
 
-        source_account = data.get("source_account")
-        target_account = data.get("target_account")
-
-        if not source_account:
-            return _error_response(
-                "source_account is required", "MISSING_SOURCE_ACCOUNT", 400
-            )
-        if not target_account:
-            return _error_response(
-                "target_account is required", "MISSING_TARGET_ACCOUNT", 400
-            )
+        # Validate and sanitize emails
+        try:
+            source_account = validate_email(validated_data["source_account"])
+            target_account = validate_email(validated_data["target_account"])
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_EMAIL", 400)
 
         # Get auth handler and load credentials
         auth_handler = _get_auth_handler()
@@ -401,23 +401,27 @@ def sync_accounts() -> tuple[dict[str, Any], int]:
     try:
         # Validate request
         data = request.get_json()
-        if not data:
-            return _error_response(
-                "Request body is required", "MISSING_REQUEST_BODY", 400
+        
+        # Validate JSON payload
+        try:
+            validated_data = validate_json_payload(
+                data, ["source_account", "target_account"]
             )
+        except ValidationError as e:
+            return _error_response(str(e), "VALIDATION_ERROR", 400)
 
-        source_account = data.get("source_account")
-        target_account = data.get("target_account")
-        dry_run = data.get("dry_run", False)
+        # Validate and sanitize emails
+        try:
+            source_account = validate_email(validated_data["source_account"])
+            target_account = validate_email(validated_data["target_account"])
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_EMAIL", 400)
 
-        if not source_account:
-            return _error_response(
-                "source_account is required", "MISSING_SOURCE_ACCOUNT", 400
-            )
-        if not target_account:
-            return _error_response(
-                "target_account is required", "MISSING_TARGET_ACCOUNT", 400
-            )
+        # Validate dry_run parameter
+        try:
+            dry_run = validate_boolean(validated_data.get("dry_run"), "dry_run", default=False)
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_DRY_RUN", 400)
 
         # Get auth handler and load credentials
         auth_handler = _get_auth_handler()
