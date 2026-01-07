@@ -95,7 +95,7 @@ class Config:
         if not self.GOOGLE_CLIENT_SECRET:
             raise ValueError("GOOGLE_CLIENT_SECRET is required")
         if not self.FLASK_SECRET_KEY or (
-            self.FLASK_SECRET_KEY == "dev-secret-key-change-me"
+            self.FLASK_SECRET_KEY == "dev-secret-key-change-me"  # nosec B105
         ):
             if self.FLASK_ENV == "production":
                 raise ValueError("FLASK_SECRET_KEY must be set in production")
@@ -125,7 +125,7 @@ class ProductionConfig(Config):
     def validate(self) -> None:
         """Validate production configuration with stricter requirements."""
         super().validate()
-        if self.FLASK_SECRET_KEY == "dev-secret-key-change-me":
+        if self.FLASK_SECRET_KEY == "dev-secret-key-change-me":  # nosec B105
             raise ValueError(
                 "FLASK_SECRET_KEY must be changed from default in production"
             )
@@ -145,7 +145,7 @@ class TestingConfig(Config):
     # Override for testing - don't require real credentials
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "test-client-id")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
-    FLASK_SECRET_KEY = "test-secret-key"
+    FLASK_SECRET_KEY = "test-secret-key"  # nosec B105
 
     def validate(self) -> None:
         """Skip credential validation in testing mode."""

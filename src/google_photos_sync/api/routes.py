@@ -136,7 +136,7 @@ def initiate_oauth() -> tuple[dict[str, Any], int]:
     try:
         # Validate request
         data = request.get_json()
-        
+
         # Validate JSON payload
         try:
             validated_data = validate_json_payload(data, ["account_type"])
@@ -214,7 +214,7 @@ def oauth_callback() -> tuple[dict[str, Any], int]:
         # Validate required parameters
         if not code:
             return _error_response("code parameter is required", "MISSING_CODE", 400)
-        
+
         # Validate and sanitize account_type
         try:
             if not account_type_str:
@@ -297,7 +297,7 @@ def compare_accounts() -> tuple[dict[str, Any], int]:
     try:
         # Validate request
         data = request.get_json()
-        
+
         # Validate JSON payload
         try:
             validated_data = validate_json_payload(
@@ -401,7 +401,7 @@ def sync_accounts() -> tuple[dict[str, Any], int]:
     try:
         # Validate request
         data = request.get_json()
-        
+
         # Validate JSON payload
         try:
             validated_data = validate_json_payload(
@@ -419,7 +419,9 @@ def sync_accounts() -> tuple[dict[str, Any], int]:
 
         # Validate dry_run parameter
         try:
-            dry_run = validate_boolean(validated_data.get("dry_run"), "dry_run", default=False)
+            dry_run = validate_boolean(
+                validated_data.get("dry_run"), "dry_run", default=False
+            )
         except ValidationError as e:
             return _error_response(str(e), "INVALID_DRY_RUN", 400)
 

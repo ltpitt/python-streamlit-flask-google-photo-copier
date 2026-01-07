@@ -10,3 +10,4 @@ requests==2.32.3
 streamlit==1.52.2
 cryptography==44.0.0
 pydantic==2.10.6
+email-validator==2.2.0

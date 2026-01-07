@@ -140,7 +140,8 @@ class CredentialEncryption:
 
         except InvalidToken as e:
             raise EncryptionError(
-                "Failed to decrypt credentials: Invalid encryption key or corrupted data"
+                "Failed to decrypt credentials: "
+                "Invalid encryption key or corrupted data"
             ) from e
         except Exception as e:
             raise EncryptionError(f"Failed to decrypt credentials: {e}") from e

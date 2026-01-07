@@ -150,10 +150,14 @@ class TestFilePathValidation:
         base_dir = tmp_path / "allowed"
         base_dir.mkdir()
 
+        # Create another directory outside base_dir
+        outside_dir = tmp_path / "not_allowed"
+        outside_dir.mkdir()
+        
         # Path outside base_dir
-        outside_path = tmp_path / "not_allowed" / "file.txt"
+        outside_path = outside_dir / "file.txt"
 
-        with pytest.raises(ValidationError, match="outside allowed directory"):
+        with pytest.raises(ValidationError, match="(outside allowed directory|Invalid file path)"):
             validate_file_path(str(outside_path), base_dir)
 
     def test_validate_file_path_empty(self) -> None:

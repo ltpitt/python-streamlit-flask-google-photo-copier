@@ -190,9 +190,7 @@ def _render_review_button(is_confirmed: bool) -> bool:
     return False
 
 
-def _render_final_warning_and_execute(
-    source_account: str, target_account: str
-) -> bool:
+def _render_final_warning_and_execute(source_account: str, target_account: str) -> bool:
     """Render final warning dialog and execute button.
 
     This is the final gate before execution. Shows one more warning
@@ -298,8 +296,7 @@ def _render_emergency_stop_button() -> bool:
             type="secondary",
             use_container_width=True,
             help=(
-                "Stop the sync operation immediately "
-                "(current photo may still complete)"
+                "Stop the sync operation immediately (current photo may still complete)"
             ),
         ):
             return True

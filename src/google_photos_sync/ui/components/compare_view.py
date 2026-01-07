@@ -173,8 +173,10 @@ def _render_photo_list(
                     # Add resolution parameter to base_url for thumbnail
                     thumbnail_url = f"{photo['base_url']}=w200-h200"
                     st.image(thumbnail_url, width=200)
-                except Exception:
-                    # Silently skip if thumbnail fails to load
+                except Exception:  # nosec B110
+                    # Silently skip if thumbnail fails to load (graceful degradation)
+                    # This is acceptable for UI display - we don't want to break
+                    # the entire comparison view if one thumbnail fails
                     pass
 
             if i < len(photos[:display_limit]) - 1:

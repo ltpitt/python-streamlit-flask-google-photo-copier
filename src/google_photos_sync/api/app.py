@@ -15,6 +15,8 @@ from typing import Any
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from google_photos_sync.api.middleware import register_error_handlers
 from google_photos_sync.config import Config, get_config
@@ -70,6 +72,9 @@ def create_app(config_name: str = "development") -> Flask:
     # Configure CORS
     _configure_cors(app, config)
 
+    # Configure rate limiting
+    _configure_rate_limiting(app, config)
+
     # Register error handlers
     register_error_handlers(app)
 
@@ -102,6 +107,37 @@ def _configure_cors(app: Flask, config: Config) -> None:
     )
 
     logger.info(f"CORS configured with allowed origins: {allowed_origins}")
+
+
+def _configure_rate_limiting(app: Flask, config: Config) -> None:
+    """Configure API rate limiting to prevent abuse.
+
+    Uses Flask-Limiter with in-memory storage.
+    Rate limits are applied per IP address.
+
+    Args:
+        app: Flask application instance
+        config: Application configuration object
+    """
+    if config.API_RATE_LIMIT_ENABLED:
+        # Calculate rate limit string (e.g., "60 per minute")
+        rate_limit = f"{config.API_RATE_LIMIT_CALLS_PER_MINUTE} per minute"
+
+        # Create limiter instance
+        limiter = Limiter(
+            app=app,
+            key_func=get_remote_address,
+            default_limits=[rate_limit],
+            storage_uri="memory://",
+            strategy="fixed-window",
+        )
+
+        # Store limiter in app extensions for access in routes
+        app.extensions["limiter"] = limiter
+
+        logger.info(f"Rate limiting enabled: {rate_limit} per IP address")
+    else:
+        logger.warning("Rate limiting is DISABLED - not recommended for production")
 
 
 def _register_routes(app: Flask) -> None:

@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr
 
 
 class EmailValidator(BaseModel):
@@ -59,7 +59,7 @@ def validate_email(email: str) -> str:
 
     # Validate using Pydantic
     try:
-        validator = EmailValidator(email=email)  # type: ignore[arg-type]
+        validator = EmailValidator(email=email)
         return validator.email
     except Exception as e:
         raise ValidationError(f"Invalid email address: {email}") from e
@@ -174,10 +174,10 @@ def validate_file_path(path: str, base_dir: Optional[Path] = None) -> Path:
             # Check if resolved path is relative to base_dir
             try:
                 resolved_path.relative_to(base_resolved)
-            except ValueError:
+            except ValueError as e:
                 raise ValidationError(
                     f"Path {path} is outside allowed directory {base_dir}"
-                )
+                ) from e
 
         return resolved_path
 
@@ -215,9 +215,7 @@ def validate_json_payload(
     missing_fields = [field for field in required_fields if field not in data]
 
     if missing_fields:
-        raise ValidationError(
-            f"Missing required fields: {', '.join(missing_fields)}"
-        )
+        raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
 
     return data
 
@@ -278,9 +276,7 @@ def validate_positive_integer(value: Any, name: str, max_value: int = 1000) -> i
         raise ValidationError(f"{name} must be positive (got {int_value})")
 
     if int_value > max_value:
-        raise ValidationError(
-            f"{name} must be <= {max_value} (got {int_value})"
-        )
+        raise ValidationError(f"{name} must be <= {max_value} (got {int_value})")
 
     return int_value
 
@@ -323,6 +319,4 @@ def validate_boolean(value: Any, name: str, default: bool = False) -> bool:
         if value in (0, 1):
             return bool(value)
 
-    raise ValidationError(
-        f"{name} must be a boolean value (got {value})"
-    )
+    raise ValidationError(f"{name} must be a boolean value (got {value})")
