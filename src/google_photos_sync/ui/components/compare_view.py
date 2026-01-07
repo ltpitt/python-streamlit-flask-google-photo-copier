@@ -353,7 +353,7 @@ def render_compare_view(
     # Type narrowing - at this point both are guaranteed to be non-None
     assert source_auth is not None
     assert target_auth is not None
-    
+
     source_account = source_auth.get("email", "")
     target_account = target_auth.get("email", "")
 

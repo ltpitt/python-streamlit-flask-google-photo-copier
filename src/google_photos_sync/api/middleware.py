@@ -11,7 +11,6 @@ Example:
 """
 
 import logging
-from typing import Any
 
 from flask import Flask, Response, jsonify
 from werkzeug.exceptions import HTTPException
