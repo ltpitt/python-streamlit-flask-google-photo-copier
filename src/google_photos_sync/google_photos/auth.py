@@ -153,7 +153,7 @@ class GooglePhotosAuth:
         """
         try:
             import secrets
-            
+
             scopes = self.SCOPES[account_type]
             flow = Flow.from_client_config(
                 client_config=self._get_client_config(),
@@ -215,11 +215,11 @@ class GooglePhotosAuth:
             # Fetch token without strict scope validation
             # Google may reorder scopes or add 'openid' automatically
             flow.fetch_token(code=authorization_code)
-            
+
             # Manually update scopes to avoid validation errors
             # The important thing is we got valid credentials
             flow.credentials._scopes = scopes
-            
+
             return flow.credentials  # type: ignore[no-any-return]
 
         except Exception as e:

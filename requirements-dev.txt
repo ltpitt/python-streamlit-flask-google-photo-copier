@@ -5,3 +5,4 @@ pytest-mock==3.14.0
 ruff==0.9.1
 types-requests==2.32.4.20250913
 bandit==1.8.0
+uv==0.5.11
