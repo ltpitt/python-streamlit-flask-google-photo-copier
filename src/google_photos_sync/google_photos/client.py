@@ -21,8 +21,8 @@ from typing import Any, Generator, Optional
 
 import requests
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from googleapiclient.discovery import build  # type: ignore[import-untyped]
+from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
 from google_photos_sync.google_photos.models import Photo
 
@@ -207,7 +207,12 @@ class GooglePhotosClient:
             download_url = f"{photo.base_url}=d"
 
             # Use streaming to avoid loading entire file in memory
-            response = requests.get(download_url, stream=True)
+            # Set timeout to prevent hanging on slow connections
+            response = requests.get(
+                download_url,
+                stream=True,
+                timeout=30,  # 30 second timeout
+            )
             response.raise_for_status()
 
             # Yield chunks for memory-efficient streaming
@@ -276,10 +281,12 @@ class GooglePhotosClient:
             "X-Goog-Upload-Protocol": "raw",
         }
 
+        # Upload with timeout to prevent hanging
         response = requests.post(
             self.UPLOAD_URL,
             data=photo_data,
             headers=headers,
+            timeout=60,  # 60 second timeout for uploads
         )
         response.raise_for_status()
 

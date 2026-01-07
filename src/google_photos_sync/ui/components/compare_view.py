@@ -52,7 +52,8 @@ def _call_compare_api(source_account: str, target_account: str) -> dict[str, Any
     response = requests.post(api_url, json=payload, timeout=60)
     response.raise_for_status()
 
-    return response.json()
+    result: dict[str, Any] = response.json()
+    return result
 
 
 def _render_account_info(source_account: str, target_account: str) -> None:
@@ -173,8 +174,10 @@ def _render_photo_list(
                     # Add resolution parameter to base_url for thumbnail
                     thumbnail_url = f"{photo['base_url']}=w200-h200"
                     st.image(thumbnail_url, width=200)
-                except Exception:
-                    # Silently skip if thumbnail fails to load
+                except Exception:  # nosec B110
+                    # Silently skip if thumbnail fails to load (graceful degradation)
+                    # This is acceptable for UI display - we don't want to break
+                    # the entire comparison view if one thumbnail fails
                     pass
 
             if i < len(photos[:display_limit]) - 1:
@@ -346,6 +349,10 @@ def render_compare_view(
             "Please authenticate both source and target accounts before comparing."
         )
         return
+
+    # Type narrowing - at this point both are guaranteed to be non-None
+    assert source_auth is not None
+    assert target_auth is not None
 
     source_account = source_auth.get("email", "")
     target_account = target_auth.get("email", "")

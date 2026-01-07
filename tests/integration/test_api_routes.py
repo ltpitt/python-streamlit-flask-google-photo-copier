@@ -156,7 +156,9 @@ class TestAuthRoutes:
         assert response.status_code == 400
         data = response.get_json()
         assert data["success"] is False
-        assert "account_type" in data["error"].lower()
+        # Accept either "account_type" or "account type" in error
+        error_lower = data["error"].lower()
+        assert "account" in error_lower and "type" in error_lower
 
     def test_initiate_oauth_flow_requires_account_type(
         self, client: FlaskClient

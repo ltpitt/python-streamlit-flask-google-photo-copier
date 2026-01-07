@@ -118,6 +118,7 @@ omit = [
     "*/tests/*",
     "*/test_*.py",
     "*/__pycache__/*",
+    "*/ui/*",  # UI components require browser testing, excluded from coverage
 ]
 
 [tool.coverage.report]

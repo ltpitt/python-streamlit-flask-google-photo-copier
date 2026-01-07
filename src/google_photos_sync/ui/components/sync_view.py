@@ -60,7 +60,8 @@ def _call_sync_api(
     response = requests.post(api_url, json=payload, timeout=300)
     response.raise_for_status()
 
-    return response.json()
+    result: dict[str, Any] = response.json()
+    return result
 
 
 def _render_destructive_warning(
@@ -190,9 +191,7 @@ def _render_review_button(is_confirmed: bool) -> bool:
     return False
 
 
-def _render_final_warning_and_execute(
-    source_account: str, target_account: str
-) -> bool:
+def _render_final_warning_and_execute(source_account: str, target_account: str) -> bool:
     """Render final warning dialog and execute button.
 
     This is the final gate before execution. Shows one more warning
@@ -298,8 +297,7 @@ def _render_emergency_stop_button() -> bool:
             type="secondary",
             use_container_width=True,
             help=(
-                "Stop the sync operation immediately "
-                "(current photo may still complete)"
+                "Stop the sync operation immediately (current photo may still complete)"
             ),
         ):
             return True
