@@ -4,6 +4,63 @@ Copy each issue below to GitHub. They are numbered for sequential implementation
 
 ---
 
+## ⚠️ CRITICAL: OAuth Authentication Already Working
+
+**DO NOT MODIFY** the OAuth flow implementation (Issues #3, #9) unless explicitly required by a specific issue. The OAuth authentication is **fully functional and tested** as of January 2026:
+
+### What Already Works (DO NOT CHANGE):
+- ✅ OAuth URL generation with correct scopes
+- ✅ State parameter: `"accounttype_randomtoken"` format (e.g., `"source_abc123"`)
+- ✅ Callback endpoint: Accepts both GET and POST methods
+- ✅ Email auto-extraction from ID token (base64 decode + JSON parse)
+- ✅ Credential storage: `~/.google_photos_sync/credentials/{account_type}_{email}.json`
+- ✅ Multi-account support (source vs target with different scopes)
+- ✅ `/api/auth/status` endpoint for auto-detection of saved credentials
+- ✅ Scope validation workaround: `flow.credentials._scopes = scopes` (Google reorders scopes)
+
+### OAuth Configuration (Production):
+- **Client ID**: `730210535720-7k0sm3an40bqtppf2733g59v3c7pmoe5.apps.googleusercontent.com`
+- **Redirect URI**: `http://localhost:5000/api/auth/callback` (configured in Google Cloud Console)
+- **App Status**: Published (Production mode)
+- **Current Scopes** (deprecated as of April 2025, but OAuth flow works):
+  - Source: `openid`, `userinfo.email`, `photoslibrary.readonly` (removed by Google)
+  - Target: `openid`, `userinfo.email`, `photoslibrary` (removed by Google)
+
+### Why This Note Exists:
+The OAuth implementation took **many iterations** to get right (redirect URI mismatches, state parameter issues, scope validation, email extraction). Since the coding agent **will not have access to real Google OAuth credentials for testing**, attempting to "improve" or "test" the OAuth flow will likely break it. 
+
+**IMPORTANT**: The current 403 Forbidden errors when listing photos are **NOT an OAuth problem**. OAuth authentication works perfectly. The issue is that Google removed the `photoslibrary.readonly` and `photoslibrary` scopes in April 2025, requiring migration to the Picker API (see ISSUE_MIGRATE_TO_PICKER_API.md).
+
+### What DOES Need Changing:
+- The **scopes** need updating for Picker API migration (`photospicker.mediaitems.readonly`)
+- The **GooglePhotosClient** needs complete replacement with Picker API implementation
+- The **UI workflow** needs adaptation for user-driven photo selection
+
+### OAuth Flow with Picker API:
+**IMPORTANT**: The OAuth 2.0 flow remains **IDENTICAL** - only the scopes change:
+- **OAuth URL generation**: Same (just different scope parameter)
+- **State parameter**: Same (`"accounttype_randomtoken"`)
+- **Callback endpoint**: Same (`/api/auth/callback`)
+- **Email extraction**: Same (from ID token JWT)
+- **Credential storage**: Same format and location
+- **Token refresh**: Same mechanism
+
+**What Changes**:
+- **Scope for reading**: `https://www.googleapis.com/auth/photospicker.mediaitems.readonly` (instead of `photoslibrary.readonly`)
+- **Scope for writing**: `https://www.googleapis.com/auth/photoslibrary.appendonly` (remains the same)
+- **Additional scopes**: Still need `openid` and `userinfo.email` for authentication
+
+**Picker API Workflow** (after OAuth):
+1. Create a session with Picker API
+2. Redirect user to Google Photos app for photo selection
+3. Poll session to check if user completed selection
+4. List selected media items from the session
+5. Download selected photos using baseUrl
+
+**Bottom Line**: If an issue doesn't explicitly mention OAuth changes, leave the OAuth code untouched. The Picker API uses standard OAuth 2.0 - our existing flow works perfectly, just update the scopes.
+
+---
+
 ## Issue #1: Project Foundation - Setup pyproject.toml, Dependencies, and Development Tools
 
 ### Description
@@ -148,6 +205,15 @@ We need to authenticate with Google Photos API for both source (read-only) and t
 - Test error handling (invalid auth code, network errors, expired refresh token)
 - Use pytest fixtures for common test data (mock credentials, config)
 - Run with coverage: `pytest tests/unit/test_google_photos_auth.py --cov=src/google_photos_sync/google_photos/auth --cov-report=term-missing`
+
+### ⚠️ NOTE: Existing OAuth Implementation
+**The OAuth flow in `auth.py` and `routes.py` is already fully functional** (tested January 2026). If implementing from scratch, you can safely reference the existing code or keep it mostly as-is. The current implementation already handles:
+- State format: `f"{account_type.value}_{random_token}"`
+- Email extraction from ID token JWT
+- Scope validation workaround: `flow.credentials._scopes = scopes`
+- Multi-account credential storage
+
+**Do not test OAuth with real credentials** - the agent won't have access. Mock-based tests are sufficient.
 
 ### Files to Create
 - `tests/unit/test_google_photos_auth.py` (RED phase - write first)
@@ -468,6 +534,13 @@ These endpoints are consumed by Streamlit UI. Must be well-documented, follow RE
 - Mock Google Photos client in tests
 - Verify response formats and status codes
 - Run: `pytest tests/integration/test_api_routes.py --cov=src/google_photos_sync/api --cov-report=term-missing`
+
+### ⚠️ NOTE: OAuth Endpoints Already Functional
+**The OAuth endpoints (`/api/auth/google`, `/api/auth/callback`, `/api/auth/status`) are already fully functional**. They were extensively debugged and tested. If implementing this issue:
+- Keep the existing OAuth endpoints as-is (tested and working)
+- Focus on `/api/compare` and `/api/sync` endpoints
+- Do not attempt to "improve" OAuth flow without explicit requirement
+- Email extraction from ID token works correctly (no manual email input needed)
 
 ### Files to Create
 - `src/google_photos_sync/api/routes.py`
@@ -881,6 +954,16 @@ Each issue builds on previous work. Do not skip ahead.
 - All docstrings use Google or NumPy style
 - No useless comments (code should be self-documenting)
 - Meaningful variable names (no single-letter vars except loop counters)
+
+## ⚠️ CRITICAL: What's Already Working (Don't Break It!)
+**OAuth Authentication is fully functional** (see warning at top of this document). Unless an issue explicitly requires OAuth changes:
+- **DO NOT modify** `src/google_photos_sync/google_photos/auth.py` OAuth flow
+- **DO NOT modify** `/api/auth/*` endpoints in `routes.py`
+- **DO NOT modify** email extraction logic (ID token base64 decode)
+- **DO NOT modify** credential storage format or location
+- **DO NOT attempt to test OAuth with real credentials** (you won't have access)
+
+**Why**: OAuth took many iterations to debug (redirect URIs, state parameters, scope validation, email extraction). The agent cannot test OAuth changes without real Google Cloud credentials. Changing working OAuth code will likely break it.
 
 ## Testing Guidelines
 - Use `pytest` for all tests
