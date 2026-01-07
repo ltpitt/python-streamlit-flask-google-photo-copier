@@ -11,6 +11,7 @@ A production-grade Python application for safe, monodirectional synchronization 
 
 - [Overview](#overview)
 - [Features](#features)
+- [Security](#security)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -56,6 +57,61 @@ A production-grade Python application for safe, monodirectional synchronization 
 - **Conservative API Usage**: Respects Google rate limits (max 3 concurrent transfers)
 - **Comprehensive Logging**: Structured logging for debugging and monitoring
 - **Error Recovery**: Automatic retry with exponential backoff
+
+## 🔒 Security
+
+Google Photos Sync implements multiple layers of security to protect your data and credentials:
+
+### Credential Protection
+- **OAuth 2.0 Authentication**: Industry-standard secure authentication
+- **Encrypted Token Storage**: Credentials encrypted at rest using Fernet (AES-128-CBC + HMAC)
+- **Scoped Permissions**: 
+  - Source account: Read-only access (`photoslibrary.readonly`)
+  - Target account: Append-only access (`photoslibrary.appendonly`)
+- **No Password Storage**: Uses OAuth tokens, never stores passwords
+
+### Input Validation & Sanitization
+- **Email Validation**: All email addresses validated using Pydantic
+- **Path Sanitization**: File paths sanitized to prevent directory traversal attacks
+- **JSON Validation**: All API payloads validated for required fields and structure
+- **Type Safety**: Full mypy strict type checking prevents type-related vulnerabilities
+
+### API Security
+- **Rate Limiting**: API endpoints rate-limited to prevent abuse (60 requests/minute)
+- **CORS Protection**: Cross-origin requests restricted to allowed origins
+- **Request Timeouts**: All HTTP requests have timeouts to prevent hanging connections
+- **CSRF Protection**: State parameter in OAuth flow prevents CSRF attacks
+
+### Data Protection
+- **No Credential Logging**: Sensitive data never appears in logs
+- **Sanitized Errors**: Error messages don't expose internal details
+- **Memory Safe**: Photos streamed, not loaded into memory (prevents memory dumps)
+- **Secure Defaults**: Debug mode disabled and secure keys required in production
+
+### Security Auditing
+- **Bandit Security Scanner**: All code scanned for common Python security issues
+- **Dependency Scanning**: Regular updates and vulnerability checks
+- **Security Policy**: See [SECURITY.md](SECURITY.md) for:
+  - Supported versions
+  - Vulnerability reporting process
+  - Production security checklist
+  - Best practices
+
+### Production Security Checklist
+Before deploying to production, ensure:
+- [ ] Set `CREDENTIAL_ENCRYPTION_KEY` to strong random value
+- [ ] Set `FLASK_SECRET_KEY` to strong random value
+- [ ] Set `FLASK_ENV=production` and `FLASK_DEBUG=false`
+- [ ] Enable HTTPS/TLS on production server
+- [ ] Restrict credentials directory permissions (`chmod 700`)
+- [ ] Configure CORS for production domain only
+- [ ] Enable API rate limiting
+- [ ] Review and rotate credentials regularly
+
+For complete security documentation, see:
+- [SECURITY.md](SECURITY.md) - Security policy and vulnerability reporting
+- [docs/user_guide.md](docs/user_guide.md) - OAuth setup and credentials
+- [.env.example](.env.example) - Configuration with security notes
 
 ## Prerequisites
 
