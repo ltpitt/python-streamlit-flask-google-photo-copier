@@ -28,14 +28,14 @@ def demo_language(lang_code: str, lang_name: str) -> None:
     print(f"App Icon:         {t('app.icon')}")
 
     # Navigation
-    print(f"\nNavigation:")
+    print("\nNavigation:")
     print(f"  - {t('nav.home')}")
     print(f"  - {t('nav.compare')}")
     print(f"  - {t('nav.sync')}")
     print(f"  - {t('nav.settings')}")
 
     # Home page
-    print(f"\nHome Page:")
+    print("\nHome Page:")
     print(f"  Main Title:     {t('home.main_title')}")
     print(f"  Subtitle:       {t('home.subtitle')}")
     print(f"  What Is Title:  {t('home.what_is_title')}")
@@ -44,40 +44,40 @@ def demo_language(lang_code: str, lang_name: str) -> None:
     print(f"  Warnings:       {t('home.warnings_title')}")
 
     # Authentication
-    print(f"\nAuthentication:")
+    print("\nAuthentication:")
     print(f"  Status:         {t('auth.status_title')}")
     print(f"  Source Account: {t('auth.source_account')}")
     print(f"  Target Account: {t('auth.target_account')}")
     print(f"  Not Signed In:  {t('auth.not_signed_in')}")
 
     # Compare page
-    print(f"\nCompare Page:")
+    print("\nCompare Page:")
     print(f"  Title:          {t('compare.title')}")
     print(f"  Description:    {t('compare.description')}")
     print(f"  Compare Button: {t('compare.compare_button')}")
 
     # Sync page
-    print(f"\nSync Page:")
+    print("\nSync Page:")
     print(f"  Title:          {t('sync.title')}")
     print(f"  Description:    {t('sync.description')}")
     print(f"  Warning Title:  {t('sync.warning_title')}")
     print(f"  Confirmation:   {t('sync.confirmation_title')}")
 
     # Settings
-    print(f"\nSettings:")
+    print("\nSettings:")
     print(f"  Title:          {t('settings.title')}")
     print(f"  Description:    {t('settings.description')}")
     print(f"  Save Button:    {t('settings.save_button')}")
     print(f"  Save Success:   {t('settings.save_success')}")
 
     # Language selector
-    print(f"\nLanguage Selector:")
+    print("\nLanguage Selector:")
     print(f"  Label:          {t('language.selector_label')}")
     print(f"  English:        {t('language.english')}")
     print(f"  Italian:        {t('language.italian')}")
 
     # Footer
-    print(f"\nFooter:")
+    print("\nFooter:")
     print(f"  Version:        {t('footer.version', version='1.0.0')}")
     print(f"  Documentation:  {t('footer.documentation')}")
     print(f"  Report Issue:   {t('footer.report_issue')}")
