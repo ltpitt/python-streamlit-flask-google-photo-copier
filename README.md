@@ -48,6 +48,7 @@ A production-grade Python application for safe, monodirectional synchronization 
 
 ### User Experience
 - **Non-Technical Friendly**: Simple UI designed for users with zero technical knowledge
+- **Multilingual Interface**: Full support for English and Italian, easily extensible for more languages
 - **Real-Time Progress**: Live updates during sync operations
 - **Detailed Reporting**: Complete statistics and action logs
 - **Dry-Run Mode**: Preview changes without executing them
@@ -632,6 +633,13 @@ View CI results: [GitHub Actions](https://github.com/ltpitt/python-streamlit-fla
   - Dependency installation
   - Development workflow
   - Tool configuration
+
+- **[Internationalization (i18n)](docs/I18N.md)**: Multilingual support documentation
+  - Supported languages (English, Italian)
+  - Translation file structure
+  - Adding new languages
+  - Usage examples
+  - Best practices
 
 ### API Documentation
 
