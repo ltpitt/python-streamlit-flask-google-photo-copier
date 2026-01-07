@@ -80,7 +80,7 @@ def _check_auth_status(account_type: str) -> Optional[dict]:
             params={"account_type": account_type.lower()},
             timeout=5
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             if data.get("success") and data.get("data", {}).get("authenticated"):
@@ -120,7 +120,7 @@ def render_auth_section(account_type: str, session_key: str) -> None:
         if auth_status:
             # Credentials found! Update session state
             st.session_state[session_key] = auth_status
-    
+
     # Now check session state
     if session_key in st.session_state and st.session_state[session_key]:
         auth_data = st.session_state[session_key]

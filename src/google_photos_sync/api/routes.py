@@ -187,7 +187,7 @@ def check_auth_status() -> tuple[dict[str, Any], int]:
     """
     try:
         account_type_str = request.args.get("account_type")
-        
+
         # Validate account_type
         try:
             if not account_type_str:
@@ -195,37 +195,37 @@ def check_auth_status() -> tuple[dict[str, Any], int]:
             account_type_str = validate_account_type(account_type_str)
         except ValidationError as e:
             return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
-        
+
         account_type = AccountType(account_type_str)
         auth_handler = _get_auth_handler()
-        
+
         # Check if credentials exist for any email
         from pathlib import Path
         creds_dir = Path.home() / ".google_photos_sync" / "credentials"
-        
+
         if not creds_dir.exists():
             return _success_response(
                 {"authenticated": False},
                 "Not authenticated"
             )
-        
+
         # Find credentials file for this account type
         pattern = f"{account_type.value}_*.json"
         creds_files = list(creds_dir.glob(pattern))
-        
+
         if not creds_files:
             return _success_response(
                 {"authenticated": False},
                 "Not authenticated"
             )
-        
+
         # Get the most recent credentials file
         latest_creds = max(creds_files, key=lambda p: p.stat().st_mtime)
-        
+
         # Extract email from filename (format: accounttype_email@domain.com.json)
         filename = latest_creds.stem  # Remove .json
         email = filename.split("_", 1)[1] if "_" in filename else "unknown"
-        
+
         return _success_response(
             {
                 "authenticated": True,
@@ -234,7 +234,7 @@ def check_auth_status() -> tuple[dict[str, Any], int]:
             },
             "Authenticated"
         )
-        
+
     except Exception as e:
         logger.exception(f"Error checking auth status: {e}")
         return _error_response("Internal server error", "INTERNAL_SERVER_ERROR", 500)
@@ -295,7 +295,7 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
         account_type_str = None
         if state and "_" in state:
             account_type_str = state.split("_")[0]
-        
+
         # Fallback: check query parameter (for backward compatibility with Streamlit flow)
         if not account_type_str:
             account_type_str = request.args.get("account_type")
@@ -336,7 +336,7 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
                         decoded = json.loads(decoded_bytes)
                         account_email = decoded.get('email')
                         logger.info(f"Extracted email from ID token: {account_email}")
-                
+
                 if not account_email:
                     return _error_response(
                         "Could not extract email from Google account. ID token missing or invalid.",
@@ -350,7 +350,7 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
                     "EMAIL_EXTRACTION_ERROR",
                     500
                 )
-        
+
         # Validate and sanitize email
         try:
             account_email = validate_email(account_email)

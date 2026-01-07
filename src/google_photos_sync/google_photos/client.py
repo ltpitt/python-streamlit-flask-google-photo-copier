@@ -87,11 +87,11 @@ class GooglePhotosClient:
         self._credentials = credentials
         self._max_retries = max_retries
         self._base_backoff = base_backoff
-        
+
         # Log credentials info for debugging
         logger.info(f"GooglePhotosClient initialized with scopes: {credentials.scopes}")
         logger.info(f"Token valid: {credentials.valid}, Expired: {credentials.expired}")
-        
+
         # Use AuthorizedSession for automatic credential refresh
         self._session = AuthorizedSession(self._credentials)
 
@@ -410,9 +410,9 @@ class GooglePhotosClient:
         return photo
 
     def _execute_request_with_retry(
-        self, 
-        method: str, 
-        url: str, 
+        self,
+        method: str,
+        url: str,
         params: Optional[dict] = None,
         json: Optional[dict] = None,
         data: Optional[bytes] = None
@@ -440,7 +440,7 @@ class GooglePhotosClient:
             try:
                 # Log request details
                 logger.debug(f"Making {method} request to {url} (attempt {attempt + 1}/{self._max_retries + 1})")
-                
+
                 # Make request using authorized session
                 if method == "GET":
                     response = self._session.get(url, params=params)
@@ -451,7 +451,7 @@ class GooglePhotosClient:
                         response = self._session.post(url, json=json, params=params)
                 else:
                     raise ValueError(f"Unsupported method: {method}")
-                
+
                 # Handle rate limiting (429 status code)
                 if response.status_code == 429:
                     if attempt < self._max_retries:
@@ -464,10 +464,10 @@ class GooglePhotosClient:
                         raise RateLimitError(
                             f"Rate limit exceeded after {self._max_retries} retries"
                         )
-                
+
                 # Raise for other error status codes
                 response.raise_for_status()
-                
+
                 # Return JSON response
                 return response.json()
 
@@ -480,7 +480,7 @@ class GooglePhotosClient:
 
         # Should not reach here, but just in case
         raise PhotosAPIError("Request failed after retries")
-    
+
     def _execute_with_retry(self, request: Any) -> dict[str, Any]:
         """Legacy method for backward compatibility. Use _execute_request_with_retry instead."""
         raise NotImplementedError("This method is deprecated - use REST API directly")
