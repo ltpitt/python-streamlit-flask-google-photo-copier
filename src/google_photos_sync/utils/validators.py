@@ -242,7 +242,7 @@ def sanitize_log_message(message: str, sensitive_patterns: list[str]) -> str:
     sanitized = message
 
     for pattern in sensitive_patterns:
-        if pattern and len(pattern) > 0:
+        if pattern:
             sanitized = sanitized.replace(pattern, "[REDACTED]")
 
     return sanitized
