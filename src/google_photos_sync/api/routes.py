@@ -175,8 +175,73 @@ def initiate_oauth() -> tuple[dict[str, Any], int]:
         return _error_response("Internal server error", "INTERNAL_SERVER_ERROR", 500)
 
 
-@api_bp.route("/auth/callback", methods=["GET"])
-def oauth_callback() -> tuple[dict[str, Any], int]:
+@api_bp.route("/auth/status", methods=["GET"])
+def check_auth_status() -> tuple[dict[str, Any], int]:
+    """Check if account is already authenticated.
+    
+    Query parameters:
+        account_type: Type of account ('source' or 'target')
+        
+    Returns:
+        JSON response with authentication status and email if authenticated
+    """
+    try:
+        account_type_str = request.args.get("account_type")
+        
+        # Validate account_type
+        try:
+            if not account_type_str:
+                raise ValidationError("account_type parameter is required")
+            account_type_str = validate_account_type(account_type_str)
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
+        
+        account_type = AccountType(account_type_str)
+        auth_handler = _get_auth_handler()
+        
+        # Check if credentials exist for any email
+        from pathlib import Path
+        creds_dir = Path.home() / ".google_photos_sync" / "credentials"
+        
+        if not creds_dir.exists():
+            return _success_response(
+                {"authenticated": False},
+                "Not authenticated"
+            )
+        
+        # Find credentials file for this account type
+        pattern = f"{account_type.value}_*.json"
+        creds_files = list(creds_dir.glob(pattern))
+        
+        if not creds_files:
+            return _success_response(
+                {"authenticated": False},
+                "Not authenticated"
+            )
+        
+        # Get the most recent credentials file
+        latest_creds = max(creds_files, key=lambda p: p.stat().st_mtime)
+        
+        # Extract email from filename (format: accounttype_email@domain.com.json)
+        filename = latest_creds.stem  # Remove .json
+        email = filename.split("_", 1)[1] if "_" in filename else "unknown"
+        
+        return _success_response(
+            {
+                "authenticated": True,
+                "email": email,
+                "account_type": account_type.value
+            },
+            "Authenticated"
+        )
+        
+    except Exception as e:
+        logger.exception(f"Error checking auth status: {e}")
+        return _error_response("Internal server error", "INTERNAL_SERVER_ERROR", 500)
+
+
+@api_bp.route("/auth/callback", methods=["GET", "POST"])
+def oauth_callback() -> tuple[dict[str, Any], int] | str:
     """Handle OAuth callback and exchange code for credentials.
 
     Query Parameters:
@@ -186,7 +251,7 @@ def oauth_callback() -> tuple[dict[str, Any], int]:
         account_email: Email address of the authenticated account
 
     Returns:
-        JSON response confirming successful authentication
+        JSON response confirming successful authentication or HTML form for email input
 
     Status Codes:
         200: Success - credentials saved
@@ -204,39 +269,93 @@ def oauth_callback() -> tuple[dict[str, Any], int]:
         >>>   "message": "Authentication successful for source@example.com"
         >>> }
     """
+    # Handle POST (form submission with email)
+    if request.method == "POST":
+        code = request.form.get("code")
+        state = request.form.get("state")
+        account_email = request.form.get("account_email")
+        account_type_str = request.form.get("account_type")
+    else:
+        # Handle GET (redirect from Google)
+        code = request.args.get("code")
+        state = request.args.get("state")
+        account_email = request.args.get("account_email")
+        account_type_str = request.args.get("account_type")
     try:
         # Get query parameters
         code = request.args.get("code")
-        # state = request.args.get("state")  # For future CSRF validation
-        account_type_str = request.args.get("account_type")
-        account_email = request.args.get("account_email")
+        state = request.args.get("state")
+        account_email = request.args.get("account_email")  # Optional: may come from query or form
 
         # Validate required parameters
         if not code:
             return _error_response("code parameter is required", "MISSING_CODE", 400)
 
+        # Decode account_type from state (format: accounttype_randomtoken)
+        account_type_str = None
+        if state and "_" in state:
+            account_type_str = state.split("_")[0]
+        
+        # Fallback: check query parameter (for backward compatibility with Streamlit flow)
+        if not account_type_str:
+            account_type_str = request.args.get("account_type")
+
         # Validate and sanitize account_type
         try:
             if not account_type_str:
-                raise ValidationError("account_type parameter is required")
+                raise ValidationError("account_type not found in state or query parameters")
             account_type_str = validate_account_type(account_type_str)
         except ValidationError as e:
             return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
 
-        # Validate and sanitize email
-        try:
-            if not account_email:
-                raise ValidationError("account_email parameter is required")
-            account_email = validate_email(account_email)
-        except ValidationError as e:
-            return _error_response(str(e), "INVALID_EMAIL", 400)
-
         # Convert to AccountType enum
         account_type = AccountType(account_type_str)
 
-        # Exchange code for credentials
+        # Exchange code for credentials FIRST
         auth_handler = _get_auth_handler()
         credentials = auth_handler.exchange_code_for_token(code, account_type)
+
+        # Now extract email from credentials if not provided
+        if not account_email:
+            try:
+                # Extract email from ID token
+                if hasattr(credentials, 'id_token') and credentials.id_token:
+                    # Decode JWT without verification (we trust Google's response)
+                    import base64
+                    import json
+                    # ID token format: header.payload.signature
+                    parts = credentials.id_token.split('.')
+                    if len(parts) >= 2:
+                        # Decode payload (add padding if needed)
+                        payload = parts[1]
+                        # Add padding for base64 decoding
+                        padding = 4 - len(payload) % 4
+                        if padding != 4:
+                            payload += '=' * padding
+                        decoded_bytes = base64.urlsafe_b64decode(payload)
+                        decoded = json.loads(decoded_bytes)
+                        account_email = decoded.get('email')
+                        logger.info(f"Extracted email from ID token: {account_email}")
+                
+                if not account_email:
+                    return _error_response(
+                        "Could not extract email from Google account. ID token missing or invalid.",
+                        "EMAIL_EXTRACTION_FAILED",
+                        400
+                    )
+            except Exception as e:
+                logger.exception(f"Failed to extract email: {e}")
+                return _error_response(
+                    f"Failed to extract email: {str(e)}",
+                    "EMAIL_EXTRACTION_ERROR",
+                    500
+                )
+        
+        # Validate and sanitize email
+        try:
+            account_email = validate_email(account_email)
+        except ValidationError as e:
+            return _error_response(str(e), "INVALID_EMAIL", 400)
 
         # Save credentials
         auth_handler.save_credentials(credentials, account_type, account_email)
@@ -245,10 +364,71 @@ def oauth_callback() -> tuple[dict[str, Any], int]:
             f"OAuth callback successful for {account_type_str} account: {account_email}"
         )
 
-        return _success_response(
-            {"account_type": account_type_str, "account_email": account_email},
-            f"Authentication successful for {account_email}",
-        )
+        # Return success HTML page instead of JSON (since this is a browser redirect)
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Authentication Successful - Google Photos Sync</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    max-width: 500px;
+                    margin: 50px auto;
+                    padding: 20px;
+                    background: #f5f5f5;
+                    text-align: center;
+                }}
+                .container {{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }}
+                h1 {{
+                    color: #1a73e8;
+                    margin-bottom: 20px;
+                }}
+                .success-icon {{
+                    font-size: 64px;
+                    margin: 20px 0;
+                }}
+                .account-info {{
+                    background: #e8f0fe;
+                    padding: 15px;
+                    border-radius: 4px;
+                    margin: 20px 0;
+                }}
+                .next-steps {{
+                    color: #5f6368;
+                    margin-top: 30px;
+                    font-size: 14px;
+                }}
+                a {{
+                    color: #1a73e8;
+                    text-decoration: none;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="success-icon">✅</div>
+                <h1>Authentication Successful!</h1>
+                
+                <div class="account-info">
+                    <strong>Account Type:</strong> {account_type_str.upper()}<br>
+                    <strong>Email:</strong> {account_email}
+                </div>
+                
+                <p>Your Google Photos account has been successfully authenticated.</p>
+                
+                <div class="next-steps">
+                    You can now close this window and return to the Streamlit app to continue.
+                </div>
+            </div>
+        </body>
+        </html>
+        """
 
     except AuthenticationError as e:
         logger.error(f"OAuth callback authentication failed: {e}")

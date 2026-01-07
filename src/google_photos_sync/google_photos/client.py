@@ -16,15 +16,17 @@ Example:
     ...     print(f"{photo.filename}: {photo.created_time}")
 """
 
+import logging
 import time
 from typing import Any, Generator, Optional
 
 import requests
+from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build  # type: ignore[import-untyped]
-from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
 from google_photos_sync.google_photos.models import Photo
+
+logger = logging.getLogger(__name__)
 
 
 class PhotosAPIError(Exception):
@@ -53,8 +55,7 @@ class GooglePhotosClient:
     """
 
     # API configuration
-    API_SERVICE_NAME = "photoslibrary"
-    API_VERSION = "v1"
+    API_BASE_URL = "https://photoslibrary.googleapis.com/v1"
     UPLOAD_URL = "https://photoslibrary.googleapis.com/v1/uploads"
 
     # Rate limiting configuration (conservative, not aggressive)
@@ -86,13 +87,13 @@ class GooglePhotosClient:
         self._credentials = credentials
         self._max_retries = max_retries
         self._base_backoff = base_backoff
-
-        # Build the Photos Library API service
-        self._service = build(
-            self.API_SERVICE_NAME,
-            self.API_VERSION,
-            credentials=self._credentials,
-        )
+        
+        # Log credentials info for debugging
+        logger.info(f"GooglePhotosClient initialized with scopes: {credentials.scopes}")
+        logger.info(f"Token valid: {credentials.valid}, Expired: {credentials.expired}")
+        
+        # Use AuthorizedSession for automatic credential refresh
+        self._session = AuthorizedSession(self._credentials)
 
     def list_photos(self) -> list[Photo]:
         """List all photos from Google Photos library with pagination.
@@ -118,22 +119,22 @@ class GooglePhotosClient:
 
             while True:
                 # Prepare request parameters
-                request_params: dict[str, Any] = {"pageSize": 100}
+                params: dict[str, Any] = {"pageSize": 100}
                 if page_token:
-                    request_params["pageToken"] = page_token
+                    params["pageToken"] = page_token
 
-                # Execute request with retry logic
-                request = self._service.mediaItems().list(**request_params)
-                response = self._execute_with_retry(request)
+                # Execute GET request with retry logic
+                url = f"{self.API_BASE_URL}/mediaItems"
+                response_data = self._execute_request_with_retry("GET", url, params=params)
 
                 # Extract photos from response
-                if "mediaItems" in response:
-                    for item in response["mediaItems"]:
+                if "mediaItems" in response_data:
+                    for item in response_data["mediaItems"]:
                         photo = self._parse_photo_from_api_response(item)
                         photos.append(photo)
 
                 # Check for next page
-                page_token = response.get("nextPageToken")
+                page_token = response_data.get("nextPageToken")
                 if not page_token:
                     break
 
@@ -408,14 +409,25 @@ class GooglePhotosClient:
 
         return photo
 
-    def _execute_with_retry(self, request: Any) -> dict[str, Any]:
-        """Execute API request with exponential backoff for rate limiting.
+    def _execute_request_with_retry(
+        self, 
+        method: str, 
+        url: str, 
+        params: Optional[dict] = None,
+        json: Optional[dict] = None,
+        data: Optional[bytes] = None
+    ) -> dict[str, Any]:
+        """Execute HTTP request with exponential backoff for rate limiting.
 
         This method implements conservative retry logic with exponential
         backoff. It respects rate limits and doesn't hammer the API.
 
         Args:
-            request: Google API request object
+            method: HTTP method (GET, POST, etc.)
+            url: Full API endpoint URL
+            params: Query parameters
+            json: JSON request body
+            data: Raw request data
 
         Returns:
             API response as dictionary
@@ -426,12 +438,22 @@ class GooglePhotosClient:
         """
         for attempt in range(self._max_retries + 1):
             try:
-                response: dict[str, Any] = request.execute()
-                return response
-
-            except HttpError as e:
+                # Log request details
+                logger.debug(f"Making {method} request to {url} (attempt {attempt + 1}/{self._max_retries + 1})")
+                
+                # Make request using authorized session
+                if method == "GET":
+                    response = self._session.get(url, params=params)
+                elif method == "POST":
+                    if data:
+                        response = self._session.post(url, data=data, params=params)
+                    else:
+                        response = self._session.post(url, json=json, params=params)
+                else:
+                    raise ValueError(f"Unsupported method: {method}")
+                
                 # Handle rate limiting (429 status code)
-                if e.resp.status == 429:
+                if response.status_code == 429:
                     if attempt < self._max_retries:
                         # Exponential backoff: 1s, 2s, 4s, etc.
                         delay = self._base_backoff * (2**attempt)
@@ -441,10 +463,24 @@ class GooglePhotosClient:
                         # Max retries exceeded
                         raise RateLimitError(
                             f"Rate limit exceeded after {self._max_retries} retries"
-                        ) from e
-                else:
-                    # Other HTTP errors - don't retry
-                    raise
+                        )
+                
+                # Raise for other error status codes
+                response.raise_for_status()
+                
+                # Return JSON response
+                return response.json()
+
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP Error {e.response.status_code}: {e.response.text}")
+                if e.response.status_code != 429:
+                    raise PhotosAPIError(f"HTTP error: {e}") from e
+            except requests.exceptions.RequestException as e:
+                raise PhotosAPIError(f"Request failed: {e}") from e
 
         # Should not reach here, but just in case
         raise PhotosAPIError("Request failed after retries")
+    
+    def _execute_with_retry(self, request: Any) -> dict[str, Any]:
+        """Legacy method for backward compatibility. Use _execute_request_with_retry instead."""
+        raise NotImplementedError("This method is deprecated - use REST API directly")
