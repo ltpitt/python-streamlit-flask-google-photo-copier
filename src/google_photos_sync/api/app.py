@@ -14,7 +14,7 @@ import logging
 from typing import Any
 
 from flask import Flask, jsonify
-from flask_cors import CORS
+from flask_cors import CORS  # type: ignore[import-untyped]
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 

@@ -60,7 +60,8 @@ def _call_sync_api(
     response = requests.post(api_url, json=payload, timeout=300)
     response.raise_for_status()
 
-    return response.json()
+    result: dict[str, Any] = response.json()
+    return result
 
 
 def _render_destructive_warning(

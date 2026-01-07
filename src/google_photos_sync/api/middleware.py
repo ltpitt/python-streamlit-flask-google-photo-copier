@@ -13,7 +13,7 @@ Example:
 import logging
 from typing import Any
 
-from flask import Flask, jsonify
+from flask import Flask, Response, jsonify
 from werkzeug.exceptions import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -34,14 +34,14 @@ def register_error_handlers(app: Flask) -> None:
     """
 
     @app.errorhandler(400)
-    def bad_request(error: HTTPException) -> tuple[dict[str, Any], int]:
+    def bad_request(error: HTTPException) -> tuple[Response, int]:
         """Handle 400 Bad Request errors.
 
         Args:
             error: HTTPException instance
 
         Returns:
-            Tuple of (JSON response dict, status code)
+            Tuple of (JSON response, status code)
         """
         logger.warning(f"Bad request: {error.description}")
         return (
@@ -56,14 +56,14 @@ def register_error_handlers(app: Flask) -> None:
         )
 
     @app.errorhandler(404)
-    def not_found(error: HTTPException) -> tuple[dict[str, Any], int]:
+    def not_found(error: HTTPException) -> tuple[Response, int]:
         """Handle 404 Not Found errors.
 
         Args:
             error: HTTPException instance
 
         Returns:
-            Tuple of (JSON response dict, status code)
+            Tuple of (JSON response, status code)
         """
         logger.warning(f"Resource not found: {error.description}")
         return (
@@ -78,14 +78,14 @@ def register_error_handlers(app: Flask) -> None:
         )
 
     @app.errorhandler(500)
-    def internal_error(error: HTTPException) -> tuple[dict[str, Any], int]:
+    def internal_error(error: HTTPException) -> tuple[Response, int]:
         """Handle 500 Internal Server Error.
 
         Args:
             error: HTTPException instance
 
         Returns:
-            Tuple of (JSON response dict, status code)
+            Tuple of (JSON response, status code)
         """
         logger.error(f"Internal server error: {error.description}", exc_info=True)
         return (
@@ -100,7 +100,7 @@ def register_error_handlers(app: Flask) -> None:
         )
 
     @app.errorhandler(Exception)
-    def handle_exception(error: Exception) -> tuple[dict[str, Any], int]:
+    def handle_exception(error: Exception) -> tuple[Response, int]:
         """Handle generic exceptions.
 
         Catches all unhandled exceptions and returns a 500 error.
@@ -109,7 +109,7 @@ def register_error_handlers(app: Flask) -> None:
             error: Exception instance
 
         Returns:
-            Tuple of (JSON response dict, status code)
+            Tuple of (JSON response, status code)
         """
         # Pass through HTTP exceptions to their specific handlers
         if isinstance(error, HTTPException):

@@ -52,7 +52,8 @@ def _call_compare_api(source_account: str, target_account: str) -> dict[str, Any
     response = requests.post(api_url, json=payload, timeout=60)
     response.raise_for_status()
 
-    return response.json()
+    result: dict[str, Any] = response.json()
+    return result
 
 
 def _render_account_info(source_account: str, target_account: str) -> None:
@@ -349,6 +350,10 @@ def render_compare_view(
         )
         return
 
+    # Type narrowing - at this point both are guaranteed to be non-None
+    assert source_auth is not None
+    assert target_auth is not None
+    
     source_account = source_auth.get("email", "")
     target_account = target_auth.get("email", "")
 

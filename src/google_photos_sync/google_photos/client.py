@@ -21,8 +21,8 @@ from typing import Any, Generator, Optional
 
 import requests
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from googleapiclient.discovery import build  # type: ignore[import-untyped]
+from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
 from google_photos_sync.google_photos.models import Photo
 
