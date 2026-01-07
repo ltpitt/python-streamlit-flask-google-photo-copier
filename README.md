@@ -1,5 +1,7 @@
 # Google Photos Sync
 
+[![CI](https://github.com/ltpitt/python-streamlit-flask-google-photo-copier/actions/workflows/ci.yml/badge.svg)](https://github.com/ltpitt/python-streamlit-flask-google-photo-copier/actions/workflows/ci.yml)
+
 A production-grade Python application for monodirectional synchronization of Google Photos between accounts, featuring a Flask REST API backend and Streamlit UI frontend.
 
 ## Features
