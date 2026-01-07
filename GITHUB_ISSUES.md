@@ -1,14 +1,16 @@
 # GitHub Issues for Google Photos Sync Application
 
-Copy each issue below to GitHub. They are numbered for sequential implementation.
+**Instructions**: Copy each issue below and paste into GitHub. Issues are numbered for sequential implementation.
 
 ---
 
-## ⚠️ CRITICAL: OAuth Authentication Already Working
+## Issue #1: Project Foundation - Setup pyproject.toml, Dependencies, and Development Tools
 
-**DO NOT MODIFY** the OAuth flow implementation (Issues #3, #9) unless explicitly required by a specific issue. The OAuth authentication is **fully functional and tested** as of January 2026:
+### ⚠️ CRITICAL PROJECT CONTEXT: OAuth Authentication Already Working
 
-### What Already Works (DO NOT CHANGE):
+**READ THIS FIRST** - The OAuth flow is **fully functional and tested** as of January 2026. Future issues must not break this:
+
+**What Already Works (DO NOT CHANGE)**:
 - ✅ OAuth URL generation with correct scopes
 - ✅ State parameter: `"accounttype_randomtoken"` format (e.g., `"source_abc123"`)
 - ✅ Callback endpoint: Accepts both GET and POST methods
@@ -16,52 +18,18 @@ Copy each issue below to GitHub. They are numbered for sequential implementation
 - ✅ Credential storage: `~/.google_photos_sync/credentials/{account_type}_{email}.json`
 - ✅ Multi-account support (source vs target with different scopes)
 - ✅ `/api/auth/status` endpoint for auto-detection of saved credentials
-- ✅ Scope validation workaround: `flow.credentials._scopes = scopes` (Google reorders scopes)
+- ✅ Scope validation workaround: `flow.credentials._scopes = scopes`
 
-### OAuth Configuration (Production):
-- **Client ID**: `730210535720-7k0sm3an40bqtppf2733g59v3c7pmoe5.apps.googleusercontent.com`
-- **Redirect URI**: `http://localhost:5000/api/auth/callback` (configured in Google Cloud Console)
-- **App Status**: Published (Production mode)
-- **Current Scopes** (deprecated as of April 2025, but OAuth flow works):
-  - Source: `openid`, `userinfo.email`, `photoslibrary.readonly` (removed by Google)
-  - Target: `openid`, `userinfo.email`, `photoslibrary` (removed by Google)
+**OAuth Configuration (Production)**:
+- Client ID: `730210535720-7k0sm3an40bqtppf2733g59v3c7pmoe5.apps.googleusercontent.com`
+- Redirect URI: `http://localhost:5000/api/auth/callback`
+- App Status: Published (Production mode)
 
-### Why This Note Exists:
-The OAuth implementation took **many iterations** to get right (redirect URI mismatches, state parameter issues, scope validation, email extraction). Since the coding agent **will not have access to real Google OAuth credentials for testing**, attempting to "improve" or "test" the OAuth flow will likely break it. 
+**Why This Note Exists**: The OAuth implementation took many iterations to debug (redirect URIs, state parameters, scope validation, email extraction). Since coding agents won't have real Google OAuth credentials for testing, attempting to "improve" the OAuth flow will likely break it.
 
-**IMPORTANT**: The current 403 Forbidden errors when listing photos are **NOT an OAuth problem**. OAuth authentication works perfectly. The issue is that Google removed the `photoslibrary.readonly` and `photoslibrary` scopes in April 2025, requiring migration to the Picker API (see ISSUE_MIGRATE_TO_PICKER_API.md).
-
-### What DOES Need Changing:
-- The **scopes** need updating for Picker API migration (`photospicker.mediaitems.readonly`)
-- The **GooglePhotosClient** needs complete replacement with Picker API implementation
-- The **UI workflow** needs adaptation for user-driven photo selection
-
-### OAuth Flow with Picker API:
-**IMPORTANT**: The OAuth 2.0 flow remains **IDENTICAL** - only the scopes change:
-- **OAuth URL generation**: Same (just different scope parameter)
-- **State parameter**: Same (`"accounttype_randomtoken"`)
-- **Callback endpoint**: Same (`/api/auth/callback`)
-- **Email extraction**: Same (from ID token JWT)
-- **Credential storage**: Same format and location
-- **Token refresh**: Same mechanism
-
-**What Changes**:
-- **Scope for reading**: `https://www.googleapis.com/auth/photospicker.mediaitems.readonly` (instead of `photoslibrary.readonly`)
-- **Scope for writing**: `https://www.googleapis.com/auth/photoslibrary.appendonly` (remains the same)
-- **Additional scopes**: Still need `openid` and `userinfo.email` for authentication
-
-**Picker API Workflow** (after OAuth):
-1. Create a session with Picker API
-2. Redirect user to Google Photos app for photo selection
-3. Poll session to check if user completed selection
-4. List selected media items from the session
-5. Download selected photos using baseUrl
-
-**Bottom Line**: If an issue doesn't explicitly mention OAuth changes, leave the OAuth code untouched. The Picker API uses standard OAuth 2.0 - our existing flow works perfectly, just update the scopes.
+**What Needs Changing**: Only the scopes need updating for Picker API migration (`photospicker.mediaitems.readonly`). The OAuth 2.0 flow itself remains identical.
 
 ---
-
-## Issue #1: Project Foundation - Setup pyproject.toml, Dependencies, and Development Tools
 
 ### Description
 Set up the complete Python project structure with modern dependency management, ruff linting configuration, and development tooling following PEP standards.
@@ -170,6 +138,9 @@ We're building an API-first application with Flask backend and Streamlit fronten
 
 ## Issue #3: TDD - Google Photos OAuth Authentication Module
 
+### ⚠️ IMPORTANT: See Issue #1 for OAuth Context
+**The OAuth flow is already fully functional**. See Issue #1 for critical details about what works and what NOT to change. Only implement OAuth if starting from scratch, otherwise preserve existing implementation.
+
 ### Description
 Implement OAuth 2.0 authentication for Google Photos API following TDD. Write failing tests first, then implement the authentication flow with credential storage and refresh token handling.
 
@@ -206,14 +177,14 @@ We need to authenticate with Google Photos API for both source (read-only) and t
 - Use pytest fixtures for common test data (mock credentials, config)
 - Run with coverage: `pytest tests/unit/test_google_photos_auth.py --cov=src/google_photos_sync/google_photos/auth --cov-report=term-missing`
 
-### ⚠️ NOTE: Existing OAuth Implementation
-**The OAuth flow in `auth.py` and `routes.py` is already fully functional** (tested January 2026). If implementing from scratch, you can safely reference the existing code or keep it mostly as-is. The current implementation already handles:
+### ⚠️ Implementation Note
+**The OAuth flow is already working** (see Issue #1 for details). If implementing from scratch, reference existing code. Key features already implemented:
 - State format: `f"{account_type.value}_{random_token}"`
 - Email extraction from ID token JWT
 - Scope validation workaround: `flow.credentials._scopes = scopes`
 - Multi-account credential storage
 
-**Do not test OAuth with real credentials** - the agent won't have access. Mock-based tests are sufficient.
+**Testing**: Use mock-based tests only (no real credentials available).
 
 ### Files to Create
 - `tests/unit/test_google_photos_auth.py` (RED phase - write first)
@@ -484,6 +455,9 @@ API-first design: Flask provides REST API consumed by Streamlit UI and potential
 
 ## Issue #9: Flask API - REST Endpoints for Sync and Compare
 
+### ⚠️ IMPORTANT: See Issue #1 for OAuth Context
+**OAuth endpoints are already fully functional**. See Issue #1 for critical details. Focus on implementing `/api/compare` and `/api/sync` endpoints.
+
 ### Description
 Implement Flask REST API endpoints for OAuth callback, compare, and sync operations with proper request validation, error handling, and JSON responses.
 
@@ -535,12 +509,11 @@ These endpoints are consumed by Streamlit UI. Must be well-documented, follow RE
 - Verify response formats and status codes
 - Run: `pytest tests/integration/test_api_routes.py --cov=src/google_photos_sync/api --cov-report=term-missing`
 
-### ⚠️ NOTE: OAuth Endpoints Already Functional
-**The OAuth endpoints (`/api/auth/google`, `/api/auth/callback`, `/api/auth/status`) are already fully functional**. They were extensively debugged and tested. If implementing this issue:
-- Keep the existing OAuth endpoints as-is (tested and working)
-- Focus on `/api/compare` and `/api/sync` endpoints
-- Do not attempt to "improve" OAuth flow without explicit requirement
-- Email extraction from ID token works correctly (no manual email input needed)
+### Implementation Note
+**OAuth endpoints are already working** (see Issue #1). Focus on:
+- `/api/compare` endpoint implementation
+- `/api/sync` endpoint implementation
+- Keep OAuth endpoints (`/api/auth/*`) as-is
 
 ### Files to Create
 - `src/google_photos_sync/api/routes.py`
@@ -914,95 +887,26 @@ Before release, ensure the application is secure, especially around OAuth creden
 
 ---
 
-# Implementation Order
+# Implementation Notes
 
-Implement issues in sequential order (1 → 16):
+**Implementation Order**: Issues 1 → 16 (sequential, each builds on previous)
 
-1. ✅ Issue #1: Project Foundation
-2. ✅ Issue #2: Project Structure
-3. ✅ Issue #3: OAuth Authentication (TDD)
-4. ✅ Issue #4: API Client (TDD)
-5. ✅ Issue #5: Compare Service (TDD)
-6. ✅ Issue #6: Transfer Manager (TDD)
-7. ✅ Issue #7: Sync Service (TDD)
-8. ✅ Issue #8: Flask API Foundation
-9. ✅ Issue #9: Flask API Endpoints
-10. ✅ Issue #10: Streamlit UI Foundation
-11. ✅ Issue #11: Streamlit Sync View
-12. ✅ Issue #12: Streamlit Compare View
-13. ✅ Issue #13: E2E Tests
-14. ✅ Issue #14: CI/CD
-15. ✅ Issue #15: Documentation
-16. ✅ Issue #16: Security & Polish
+**Development Workflow**:
+1. **RED**: Write failing tests first
+2. **GREEN**: Write minimal code to pass tests
+3. **REFACTOR**: Clean up, optimize, improve
 
-Each issue builds on previous work. Do not skip ahead.
+**Key Standards**:
+- TDD mandatory (90%+ coverage)
+- PEP 8, 257, 484 compliance
+- Ruff linting (zero errors)
+- Mypy strict type checking
+- Clean Code: KISS, SRP, DRY
+- Dependency injection (no hard-coded deps)
 
----
-
-# Notes for AI Agent (Claude Sonnet 4.5)
-
-## General Guidelines
-- **Always start with RED tests** (failing tests first)
-- **Then write GREEN code** (minimal code to pass tests)
-- **Then REFACTOR** (clean up, optimize, improve)
-- Use ruff for linting: `ruff check . --fix`
-- Use mypy for type checking: `mypy src/ --strict`
-- Target 90% test coverage minimum
-- Follow PEP 8, PEP 257 (docstrings), PEP 484 (type hints)
-- Clean Code principles: KISS, SRP, DRY
-- Use dependency injection (don't hard-code dependencies)
-- All docstrings use Google or NumPy style
-- No useless comments (code should be self-documenting)
-- Meaningful variable names (no single-letter vars except loop counters)
-
-## ⚠️ CRITICAL: What's Already Working (Don't Break It!)
-**OAuth Authentication is fully functional** (see warning at top of this document). Unless an issue explicitly requires OAuth changes:
-- **DO NOT modify** `src/google_photos_sync/google_photos/auth.py` OAuth flow
-- **DO NOT modify** `/api/auth/*` endpoints in `routes.py`
-- **DO NOT modify** email extraction logic (ID token base64 decode)
-- **DO NOT modify** credential storage format or location
-- **DO NOT attempt to test OAuth with real credentials** (you won't have access)
-
-**Why**: OAuth took many iterations to debug (redirect URIs, state parameters, scope validation, email extraction). The agent cannot test OAuth changes without real Google Cloud credentials. Changing working OAuth code will likely break it.
-
-## Testing Guidelines
-- Use `pytest` for all tests
-- Use `pytest-mock` or `unittest.mock` for mocking
-- Use `pytest-cov` for coverage reports
-- Mock external APIs (never make real API calls in tests)
-- Test happy paths AND error cases
-- Test edge cases (empty inputs, large inputs, invalid inputs)
-- Tests should be fast (<1s each typically)
-- Tests should be deterministic (no flaky tests)
-
-## Code Style
-- Line length: 88 characters (Black standard)
-- Use type hints everywhere
-- Use dataclasses or Pydantic for data models
-- Prefer composition over inheritance
-- Keep functions small (<20 lines ideally)
-- One function does one thing
-- Use descriptive names: `calculate_total_photos()` not `calc()`
-
-## Common Patterns
-- **Config**: Load from environment variables using `python-dotenv`
-- **Logging**: Use Python's `logging` module, structured logs
-- **Error handling**: Catch specific exceptions, provide helpful messages
-- **API responses**: Consistent JSON format with `success`, `data`, `error` fields
-- **Async**: Use if needed for long operations, but keep simple initially
-
-## When Stuck
-- Re-read the issue description carefully
-- Check existing code in the repository
-- Look at test examples from previous issues
-- Follow the TDD cycle: RED → GREEN → REFACTOR
-- Ask clarifying questions if requirements are unclear
-
-## Success Criteria
-Each issue is complete when:
-- All tests pass (`pytest`)
-- Coverage ≥90% (`pytest --cov --cov-report=term-missing`)
-- Linting passes (`ruff check .`)
-- Type checking passes (`mypy src/ --strict`)
-- Code follows PEP standards and Clean Code principles
-- Documentation is clear and complete
+**Critical Reminders**:
+- OAuth is working - don't modify unless issue explicitly requires it (see Issue #1)
+- Use virtual environment (uv for fast installs)
+- Mock external APIs in tests
+- Code should be self-documenting (minimal comments)
+- Functions: <20 lines, do one thing, descriptive names
