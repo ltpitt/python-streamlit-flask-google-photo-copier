@@ -75,9 +75,16 @@ class Translator:
         file_path = self._locales_dir / f"{lang}.json"
 
         if not file_path.exists():
+            # List available languages by scanning directory
+            available = (
+                [f.stem for f in self._locales_dir.glob("*.json") if f.is_file()]
+                if self._locales_dir.exists()
+                else []
+            )
+
             raise FileNotFoundError(
                 f"Translation file not found: {file_path}. "
-                f"Available languages: {get_available_languages()}"
+                f"Available languages: {available}"
             )
 
         with open(file_path, encoding="utf-8") as f:

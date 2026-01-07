@@ -16,9 +16,14 @@ Example:
     >>> render_language_selector()
 """
 
+from typing import TYPE_CHECKING
+
 import streamlit as st
 
 from google_photos_sync.i18n import get_available_languages, get_translator
+
+if TYPE_CHECKING:
+    from google_photos_sync.i18n.translator import Translator
 
 
 def render_language_selector() -> None:
@@ -94,7 +99,7 @@ def get_current_language() -> str:
     return st.session_state.language  # type: ignore
 
 
-def get_current_translator() -> "Translator":  # type: ignore # noqa: F821
+def get_current_translator() -> "Translator":
     """Get translator instance for current language.
 
     This is a convenience function that combines get_current_language()
