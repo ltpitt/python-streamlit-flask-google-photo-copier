@@ -183,7 +183,8 @@ class TestCompleteOAuthFlow:
                 "code=auth-code-xyz&"
                 "state=random-state-token-123&"
                 "account_type=source&"
-                "account_email=source@example.com"
+                "account_email=source@example.com",
+                headers={"Accept": "application/json"},
             )
 
             # Verify callback success
@@ -230,7 +231,8 @@ class TestCompleteOAuthFlow:
                 "code=target-code&"
                 "state=state-456&"
                 "account_type=target&"
-                "account_email=target@example.com"
+                "account_email=target@example.com",
+                headers={"Accept": "application/json"},
             )
 
             assert callback_response.status_code == 200
@@ -254,7 +256,8 @@ class TestCompleteOAuthFlow:
                 "code=invalid-code&"
                 "state=state-123&"
                 "account_type=source&"
-                "account_email=source@example.com"
+                "account_email=source@example.com",
+                headers={"Accept": "application/json"},
             )
 
             assert response.status_code == 401
@@ -279,7 +282,8 @@ class TestCompleteOAuthFlow:
                 "code=valid-code&"
                 "state=state-123&"
                 "account_type=source&"
-                "account_email=source@example.com"
+                "account_email=source@example.com",
+                headers={"Accept": "application/json"},
             )
 
             assert response.status_code == 500
@@ -890,7 +894,8 @@ class TestEndToEndIntegration:
             mock_auth.exchange_code_for_token.return_value = mock_credentials
             callback = client.get(
                 "/api/auth/callback?code=c1&state=s1&"
-                "account_type=source&account_email=source@example.com"
+                "account_type=source&account_email=source@example.com",
+                headers={"Accept": "application/json"},
             )
             assert callback.status_code == 200
 
@@ -900,7 +905,8 @@ class TestEndToEndIntegration:
 
             callback = client.get(
                 "/api/auth/callback?code=c2&state=s2&"
-                "account_type=target&account_email=target@example.com"
+                "account_type=target&account_email=target@example.com",
+                headers={"Accept": "application/json"},
             )
             assert callback.status_code == 200
 
