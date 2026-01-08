@@ -149,7 +149,7 @@ Before you begin, ensure you have:
    ```bash
    # Using uv (fast!)
    uv venv
-   
+
    # Using standard venv (fallback)
    python -m venv .venv
    ```
@@ -158,7 +158,7 @@ Before you begin, ensure you have:
    ```bash
    # macOS/Linux
    source .venv/bin/activate
-   
+
    # Windows PowerShell
    .venv\Scripts\Activate.ps1
    ```
@@ -168,7 +168,7 @@ Before you begin, ensure you have:
    # Using uv (recommended - 10-100x faster!)
    uv pip install -r requirements.txt -r requirements-dev.txt
    uv pip install -e .
-   
+
    # Using pip (fallback)
    pip install -r requirements.txt -r requirements-dev.txt
    pip install -e .
@@ -178,7 +178,7 @@ Before you begin, ensure you have:
    ```bash
    # Run automated verification
    ./verify-setup.sh
-   
+
    # Or manually verify
    python --version    # Should show 3.10+
    ruff --version      # Should show ruff version
@@ -215,7 +215,7 @@ make test
    ```bash
    # macOS/Linux
    cp .env.example .env
-   
+
    # Windows
    copy .env.example .env
    ```
@@ -227,16 +227,16 @@ make test
    GOOGLE_CLIENT_ID=your_client_id_here.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=your_client_secret_here
    GOOGLE_REDIRECT_URI=http://localhost:8080/oauth2callback
-   
+
    # Transfer Settings (OPTIONAL - defaults work well)
    MAX_CONCURRENT_TRANSFERS=3   # Conservative (prevents rate limits)
    CHUNK_SIZE_MB=8              # Memory-efficient chunk size
    MAX_RETRIES=3                # Retry attempts for failed operations
-   
+
    # Flask Configuration
    FLASK_ENV=development
    FLASK_SECRET_KEY=change_this_in_production
-   
+
    # Logging
    LOG_LEVEL=INFO               # DEBUG for troubleshooting
    LOG_FILE=google_photos_sync.log
@@ -574,15 +574,15 @@ def sync_accounts(
     dry_run: bool = False
 ) -> SyncResult:
     """Synchronize target account to match source account.
-    
+
     Args:
         source_account: Email of source Google Photos account
         target_account: Email of target Google Photos account
         dry_run: If True, preview changes without executing
-        
+
     Returns:
         SyncResult with statistics and action details
-        
+
     Raises:
         AuthenticationError: If credentials invalid
         SyncError: If sync operation fails
@@ -620,14 +620,14 @@ View CI results: [GitHub Actions](https://github.com/ltpitt/python-streamlit-fla
   - Authentication process
   - How to compare and sync accounts
   - Troubleshooting and FAQ
-  
+
 - **[Architecture Documentation](docs/architecture.md)**: Technical architecture details
   - System architecture diagrams
   - Component descriptions
   - Data flow diagrams
   - Technology stack
   - Design decisions and rationale
-  
+
 - **[Setup Guide](SETUP.md)**: Detailed development setup
   - Virtual environment setup
   - Dependency installation
@@ -667,7 +667,7 @@ We welcome contributions! Please follow these guidelines:
 1. **Read the Documentation**
    - [Architecture Documentation](docs/architecture.md)
    - [Development Workflow](#development-workflow)
-   
+
 2. **Check Existing Issues**
    - [GitHub Issues](https://github.com/ltpitt/python-streamlit-flask-google-photo-copier/issues)
    - See if your idea/bug is already being discussed
@@ -745,7 +745,7 @@ We welcome contributions! Please follow these guidelines:
    # or
    git commit -m "fix: resolve bug description"
    ```
-   
+
    **Commit Message Format**:
    - `feat:` - New feature
    - `fix:` - Bug fix
