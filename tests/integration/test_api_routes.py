@@ -142,6 +142,29 @@ class TestAuthRoutes:
         assert data["success"] is False
         assert "error" in data
 
+    def test_initiate_oauth_flow_handles_auth_error(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
+        """Test POST /api/auth/google handles authentication errors."""
+        # Arrange
+        from google_photos_sync.google_photos.auth import AuthenticationError
+
+        mock_auth.generate_auth_url.side_effect = AuthenticationError(
+            "OAuth setup failed"
+        )
+
+        # Act
+        response = client.post(
+            "/api/auth/google",
+            json={"account_type": "source"},
+        )
+
+        # Assert
+        assert response.status_code == 500
+        data = response.get_json()
+        assert data["success"] is False
+        assert data["code"] == "AUTH_INITIATION_FAILED"
+
     def test_initiate_oauth_flow_validates_account_type(
         self, client: FlaskClient
     ) -> None:
@@ -185,7 +208,8 @@ class TestAuthRoutes:
 
         # Act
         response = client.get(
-            "/api/auth/callback?code=test-auth-code&state=test-state&account_type=source&account_email=user@example.com"
+            "/api/auth/callback?code=test-auth-code&state=test-state&account_type=source&account_email=user@example.com",
+            headers={"Accept": "application/json"}
         )
 
         # Assert
@@ -219,8 +243,15 @@ class TestAuthRoutes:
         data = response.get_json()
         assert data["success"] is False
 
-    def test_oauth_callback_requires_account_email(self, client: FlaskClient) -> None:
+    def test_oauth_callback_requires_account_email(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
         """Test GET /api/auth/callback requires account_email parameter."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_credentials.id_token = None  # No ID token to extract email from
+        mock_auth.exchange_code_for_token.return_value = mock_credentials
+
         # Act
         response = client.get(
             "/api/auth/callback?code=test-code&state=test-state&account_type=source"
@@ -268,7 +299,8 @@ class TestAuthRoutes:
 
         # Act
         response = client.get(
-            "/api/auth/callback?code=test-code&state=test-state&account_type=source&account_email=user@example.com"
+            "/api/auth/callback?code=test-code&state=test-state&account_type=source&account_email=user@example.com",
+            headers={"Accept": "application/json"}
         )
 
         # Assert
@@ -276,6 +308,123 @@ class TestAuthRoutes:
         data = response.get_json()
         assert data["success"] is False
         assert "error" in data
+
+    def test_oauth_callback_returns_html_for_browser(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
+        """Test GET /api/auth/callback returns HTML for browser requests."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_auth.exchange_code_for_token.return_value = mock_credentials
+
+        # Act - no Accept header = browser request
+        response = client.get(
+            "/api/auth/callback?code=test-code&state=test-state&account_type=source&account_email=user@example.com"
+        )
+
+        # Assert
+        assert response.status_code == 200
+        assert b"Authentication Successful" in response.data
+        assert b"user@example.com" in response.data
+        mock_auth.save_credentials.assert_called_once()
+
+    def test_oauth_callback_handles_email_extraction_from_id_token(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
+        """Test GET /api/auth/callback extracts email from ID token."""
+        # Arrange
+        import base64
+        import json
+
+        # Create a mock ID token with email
+        payload = {"email": "extracted@example.com", "sub": "123456"}
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        payload_b64 = base64.urlsafe_b64encode(payload_bytes).decode(
+            "utf-8"
+        ).rstrip("=")
+        id_token = f"header.{payload_b64}.signature"
+
+        mock_credentials = mock.Mock()
+        mock_credentials.id_token = id_token
+        mock_auth.exchange_code_for_token.return_value = mock_credentials
+
+        # Act - no account_email in query, should extract from ID token
+        response = client.get(
+            "/api/auth/callback?code=test-code&state=test-state&account_type=source",
+            headers={"Accept": "application/json"}
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["success"] is True
+        # Verify it saved with the extracted email
+        saved_email = mock_auth.save_credentials.call_args[0][2]
+        assert saved_email == "extracted@example.com"
+
+    def test_oauth_callback_handles_email_extraction_failure(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
+        """Test GET /api/auth/callback handles ID token extraction errors."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_credentials.id_token = "invalid.token.format"  # Invalid JWT
+        mock_auth.exchange_code_for_token.return_value = mock_credentials
+
+        # Act
+        response = client.get(
+            "/api/auth/callback?code=test-code&state=test-state&account_type=source",
+            headers={"Accept": "application/json"}
+        )
+
+        # Assert
+        assert response.status_code == 500
+        data = response.get_json()
+        assert data["success"] is False
+        assert "email" in data["error"].lower()
+
+    def test_oauth_callback_handles_invalid_email_format(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
+        """Test GET /api/auth/callback validates email format."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_auth.exchange_code_for_token.return_value = mock_credentials
+
+        # Act - invalid email format
+        response = client.get(
+            "/api/auth/callback?code=test-code&state=test-state&account_type=source&account_email=invalid-email",
+            headers={"Accept": "application/json"}
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data["success"] is False
+        assert data["code"] == "INVALID_EMAIL"
+
+    def test_oauth_callback_extracts_account_type_from_query_fallback(
+        self, client: FlaskClient, mock_auth: mock.Mock
+    ) -> None:
+        """Test callback uses query parameter when state lacks account_type."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_auth.exchange_code_for_token.return_value = mock_credentials
+
+        # Act - state without account_type prefix, rely on query parameter
+        response = client.get(
+            (
+                "/api/auth/callback?code=test-code&state=random-token-"
+                "without-prefix&account_type=target&account_email=user@example.com"
+            ),
+            headers={"Accept": "application/json"},
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["success"] is True
+        assert data["data"]["account_type"] == "target"
 
 
 class TestCompareRoute:
@@ -323,6 +472,36 @@ class TestCompareRoute:
         assert data["data"]["total_source_photos"] == 2
         assert data["data"]["total_target_photos"] == 1
         assert len(data["data"]["missing_on_target"]) == 1
+
+    def test_compare_accounts_handles_exception_in_comparison(
+        self,
+        client: FlaskClient,
+        mock_auth: mock.Mock,
+        mock_google_client: mock.Mock,
+        mock_compare_service: mock.Mock,
+    ) -> None:
+        """Test POST /api/compare handles exceptions during comparison."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_auth.get_valid_credentials.return_value = mock_credentials
+        mock_compare_service.compare_accounts.side_effect = ValueError(
+            "Invalid photo data"
+        )
+
+        # Act
+        response = client.post(
+            "/api/compare",
+            json={
+                "source_account": "source@example.com",
+                "target_account": "target@example.com",
+            },
+        )
+
+        # Assert
+        assert response.status_code == 500
+        data = response.get_json()
+        assert data["success"] is False
+        assert "Invalid photo data" in data["error"]
 
     def test_compare_accounts_requires_source_account(
         self, client: FlaskClient
@@ -484,6 +663,37 @@ class TestSyncRoute:
         assert "data" in data
         assert data["data"]["photos_added"] == 1
         assert data["data"]["dry_run"] is False
+
+    def test_sync_accounts_handles_exception_in_sync(
+        self,
+        client: FlaskClient,
+        mock_auth: mock.Mock,
+        mock_google_client: mock.Mock,
+        mock_sync_service: mock.Mock,
+    ) -> None:
+        """Test POST /api/sync handles exceptions during sync."""
+        # Arrange
+        mock_credentials = mock.Mock()
+        mock_auth.get_valid_credentials.return_value = mock_credentials
+        mock_sync_service.sync_accounts.side_effect = RuntimeError(
+            "Network error during transfer"
+        )
+
+        # Act
+        response = client.post(
+            "/api/sync",
+            json={
+                "source_account": "source@example.com",
+                "target_account": "target@example.com",
+                "dry_run": False,
+            },
+        )
+
+        # Assert
+        assert response.status_code == 500
+        data = response.get_json()
+        assert data["success"] is False
+        assert "Network error during transfer" in data["error"]
 
     def test_sync_accounts_supports_dry_run_mode(
         self,

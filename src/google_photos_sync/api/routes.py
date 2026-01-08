@@ -178,10 +178,10 @@ def initiate_oauth() -> tuple[dict[str, Any], int]:
 @api_bp.route("/auth/status", methods=["GET"])
 def check_auth_status() -> tuple[dict[str, Any], int]:
     """Check if account is already authenticated.
-    
+
     Query parameters:
         account_type: Type of account ('source' or 'target')
-        
+
     Returns:
         JSON response with authentication status and email if authenticated
     """
@@ -197,16 +197,15 @@ def check_auth_status() -> tuple[dict[str, Any], int]:
             return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
 
         account_type = AccountType(account_type_str)
-        auth_handler = _get_auth_handler()
 
         # Check if credentials exist for any email
         from pathlib import Path
+
         creds_dir = Path.home() / ".google_photos_sync" / "credentials"
 
         if not creds_dir.exists():
             return _success_response(
-                {"authenticated": False},
-                "Not authenticated"
+                {"authenticated": False}, "Not authenticated"
             )
 
         # Find credentials file for this account type
@@ -215,8 +214,7 @@ def check_auth_status() -> tuple[dict[str, Any], int]:
 
         if not creds_files:
             return _success_response(
-                {"authenticated": False},
-                "Not authenticated"
+                {"authenticated": False}, "Not authenticated"
             )
 
         # Get the most recent credentials file
@@ -230,18 +228,20 @@ def check_auth_status() -> tuple[dict[str, Any], int]:
             {
                 "authenticated": True,
                 "email": email,
-                "account_type": account_type.value
+                "account_type": account_type.value,
             },
-            "Authenticated"
+            "Authenticated",
         )
 
     except Exception as e:
         logger.exception(f"Error checking auth status: {e}")
-        return _error_response("Internal server error", "INTERNAL_SERVER_ERROR", 500)
+        return _error_response(
+            "Internal server error", "INTERNAL_SERVER_ERROR", 500
+        )
 
 
 @api_bp.route("/auth/callback", methods=["GET", "POST"])
-def oauth_callback() -> tuple[dict[str, Any], int] | str:
+def oauth_callback() -> tuple[dict[str, Any], int] | str:  # noqa: C901
     """Handle OAuth callback and exchange code for credentials.
 
     Query Parameters:
@@ -285,7 +285,8 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
         # Get query parameters
         code = request.args.get("code")
         state = request.args.get("state")
-        account_email = request.args.get("account_email")  # Optional: may come from query or form
+        # Optional: may come from query or form
+        account_email = request.args.get("account_email")
 
         # Validate required parameters
         if not code:
@@ -296,14 +297,16 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
         if state and "_" in state:
             account_type_str = state.split("_")[0]
 
-        # Fallback: check query parameter (for backward compatibility with Streamlit flow)
+        # Fallback: check query parameter (backward compatibility)
         if not account_type_str:
             account_type_str = request.args.get("account_type")
 
         # Validate and sanitize account_type
         try:
             if not account_type_str:
-                raise ValidationError("account_type not found in state or query parameters")
+                raise ValidationError(
+                    "account_type not found in state or query parameters"
+                )
             account_type_str = validate_account_type(account_type_str)
         except ValidationError as e:
             return _error_response(str(e), "INVALID_ACCOUNT_TYPE", 400)
@@ -339,9 +342,12 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
 
                 if not account_email:
                     return _error_response(
-                        "Could not extract email from Google account. ID token missing or invalid.",
+                        (
+                            "Could not extract email from Google account. "
+                            "ID token missing or invalid."
+                        ),
                         "EMAIL_EXTRACTION_FAILED",
-                        400
+                        400,
                     )
             except Exception as e:
                 logger.exception(f"Failed to extract email: {e}")
@@ -364,7 +370,20 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
             f"OAuth callback successful for {account_type_str} account: {account_email}"
         )
 
-        # Return success HTML page instead of JSON (since this is a browser redirect)
+        # Check if request prefers JSON (API client) or HTML (browser)
+        # Browser redirects from Google will have 'text/html' in Accept header
+        accept_header = request.headers.get("Accept", "")
+        if "application/json" in accept_header or request.is_json:
+            # Return JSON response for API clients (tests, programmatic access)
+            return _success_response(
+                {
+                    "account_type": account_type_str,
+                    "account_email": account_email,
+                },
+                f"Authentication successful for {account_email}",
+            )
+
+        # Return success HTML page for browser redirects
         return f"""
         <!DOCTYPE html>
         <html>
@@ -414,16 +433,18 @@ def oauth_callback() -> tuple[dict[str, Any], int] | str:
             <div class="container">
                 <div class="success-icon">✅</div>
                 <h1>Authentication Successful!</h1>
-                
+
                 <div class="account-info">
                     <strong>Account Type:</strong> {account_type_str.upper()}<br>
                     <strong>Email:</strong> {account_email}
                 </div>
-                
-                <p>Your Google Photos account has been successfully authenticated.</p>
-                
+
+                <p>Your Google Photos account has been successfully
+                authenticated.</p>
+
                 <div class="next-steps">
-                    You can now close this window and return to the Streamlit app to continue.
+                    You can now close this window and return to the
+                    Streamlit app to continue.
                 </div>
             </div>
         </body>
