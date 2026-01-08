@@ -1,8 +1,8 @@
-mypy==1.14.1
-pytest==8.3.4
-pytest-cov==6.0.0
-pytest-mock==3.14.0
-ruff==0.9.1
-types-requests==2.32.4.20250913
-bandit==1.8.0
-uv==0.5.11
+mypy==1.19.1
+pytest==9.0.2
+pytest-cov==7.0.0
+pytest-mock==3.15.1
+ruff==0.14.10
+types-requests==2.32.4.20260107
+bandit==1.9.2
+uv==0.9.22
