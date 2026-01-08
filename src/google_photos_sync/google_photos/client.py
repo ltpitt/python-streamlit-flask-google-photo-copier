@@ -22,8 +22,8 @@ from typing import Any, Generator, Optional
 
 import requests
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from googleapiclient.discovery import build  # type: ignore[import-untyped]
+from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
 from google_photos_sync.google_photos.models import Photo
 
@@ -122,7 +122,7 @@ class GooglePhotosClient:
 
                 # Create request using service
                 request = self._service.mediaItems().list(**params)
-                
+
                 # Execute with retry logic
                 response_data = self._execute_with_retry(request)
 
@@ -427,7 +427,7 @@ class GooglePhotosClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # Execute the request
-                response = request.execute()
+                response: dict[str, Any] = request.execute()
                 return response
 
             except HttpError as e:
@@ -437,7 +437,8 @@ class GooglePhotosClient:
                         # Exponential backoff: 1s, 2s, 4s, etc.
                         delay = self._base_backoff * (2**attempt)
                         logger.warning(
-                            f"Rate limited, retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
+                            f"Rate limited, retrying in {delay}s "
+                            f"(attempt {attempt + 1}/{self._max_retries})"
                         )
                         time.sleep(delay)
                         continue
@@ -445,7 +446,7 @@ class GooglePhotosClient:
                         # Max retries exceeded
                         raise RateLimitError(
                             f"Rate limit exceeded after {self._max_retries} retries"
-                        )
+                        ) from None
                 else:
                     # Other HTTP errors - don't retry
                     raise PhotosAPIError(f"HTTP error {e.resp.status}: {e}") from e
