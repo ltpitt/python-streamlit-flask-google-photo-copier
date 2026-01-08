@@ -28,7 +28,7 @@ callback_result = {}
 class CallbackHandler(BaseHTTPRequestHandler):
     """HTTP handler to capture OAuth callback."""
 
-    def do_GET(self):
+    def do_GET(self) -> None:  # noqa: N802 - Method name required by BaseHTTPRequestHandler
         """Handle GET request from OAuth redirect."""
         # Parse query parameters
         parsed = urlparse(self.path)
@@ -178,7 +178,12 @@ def test_oauth_flow():
 
                 # Verify saved credentials
                 print("\n[STEP 6] Verifying saved credentials...")
-                creds_file = Path.home() / ".google_photos_sync" / "credentials" / f"source_{email}.json"
+                creds_file = (
+                    Path.home()
+                    / ".google_photos_sync"
+                    / "credentials"
+                    / f"source_{email}.json"
+                )
                 if creds_file.exists():
                     print(f"✅ Credentials file exists: {creds_file}")
                 else:

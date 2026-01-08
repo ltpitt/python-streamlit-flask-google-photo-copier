@@ -7,7 +7,7 @@ as pure functions following clean code principles.
 
 import logging
 import webbrowser
-from typing import Optional
+from typing import Any, Optional
 
 import requests
 import streamlit as st
@@ -64,7 +64,7 @@ def _initiate_oauth_flow(account_type: str) -> Optional[tuple[str, str]]:
         return None
 
 
-def _check_auth_status(account_type: str) -> Optional[dict]:
+def _check_auth_status(account_type: str) -> Optional[dict[str, Any]]:
     """Check if account is already authenticated by querying API.
 
     Args:
