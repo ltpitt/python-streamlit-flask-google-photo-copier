@@ -398,11 +398,15 @@ def render_compare_view(
                 )
                 return
             except requests.HTTPError as e:
-                st.error(f"❌ **HTTP Error:** {e}\n\nResponse: {e.response.text if hasattr(e, 'response') else 'No response'}")
+                response_text = (
+                    e.response.text if hasattr(e, "response") else "No response"
+                )
+                st.error(f"❌ **HTTP Error:** {e}\n\nResponse: {response_text}")
                 return
             except Exception as e:
                 st.error(f"❌ **Unexpected error:** {str(e)}")
                 import traceback
+
                 st.code(traceback.format_exc())
                 return
 
